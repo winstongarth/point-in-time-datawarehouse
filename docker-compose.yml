@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: pdw-postgres
+    environment:
+      POSTGRES_USER: pdw
+      POSTGRES_PASSWORD: pdw
+      POSTGRES_DB: pdw
+    ports:
+      - "5432:5432"
+    volumes:
+      - pdw-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pdw -d pdw"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pdw-postgres-data:
