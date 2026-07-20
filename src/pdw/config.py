@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql://pdw:pdw@localhost:5433/pdw"
     edgar_contact_email: str = "set-me@example.com"
+    edgar_requests_per_second: float = 10.0
+    tiingo_api_token: str = "set-me"
     log_level: str = "INFO"
     environment: str = "development"
 

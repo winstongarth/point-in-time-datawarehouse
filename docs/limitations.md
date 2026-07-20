@@ -20,4 +20,14 @@ Stated plainly, up front, rather than left for a reviewer to discover:
   `core.entity_ticker`, based on what can be inferred from filing history
   rather than an authoritative historical mapping table.
 
+- **Stooq was dropped as the secondary price vendor (M2).** The spec
+  originally named Stooq's CSV endpoint for cross-vendor price reconciliation.
+  During the M2 build, that endpoint was found to sit behind a site-wide
+  JavaScript proof-of-work bot challenge (confirmed with multiple
+  User-Agents — not a header issue), which a plain HTTP client cannot pass
+  without solving the challenge programmatically. This project does not
+  build anti-bot-evasion tooling, so Stooq was replaced with
+  [Tiingo](https://www.tiingo.com/)'s free-tier EOD prices API. See
+  CLAUDE.md 4.3.
+
 This list will grow as later milestones surface further caveats worth naming.

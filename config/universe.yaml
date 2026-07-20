@@ -1,0 +1,59 @@
+# Fixed universe of 50 large-cap US tickers (see CLAUDE.md section 2: "Hard
+# scope limits" — this is a static list, not derived from a live index, so
+# the universe doesn't silently drift as index membership changes).
+#
+# CIKs are resolved at ingest time from SEC's ticker->CIK map
+# (https://www.sec.gov/files/company_tickers.json), not hardcoded here, since
+# that mapping is the authoritative source and can change independently of
+# this list.
+tickers:
+  - AAPL
+  - MSFT
+  - GOOGL
+  - AMZN
+  - NVDA
+  - META
+  - BRK.B
+  - TSLA
+  - AVGO
+  - JPM
+  - LLY
+  - V
+  - XOM
+  - UNH
+  - MA
+  - COST
+  - HD
+  - PG
+  - JNJ
+  - NFLX
+  - ABBV
+  - BAC
+  - CRM
+  - ORCL
+  - WMT
+  - KO
+  - MRK
+  - CVX
+  - ADBE
+  - PEP
+  - ACN
+  - TMO
+  - LIN
+  - MCD
+  - ABT
+  - CSCO
+  - WFC
+  - IBM
+  - GE
+  - DHR
+  - PM
+  - TXN
+  - INTU
+  - CAT
+  - QCOM
+  - VZ
+  - AMD
+  - NOW
+  - UNP
+  - AMGN

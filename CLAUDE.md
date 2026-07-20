@@ -128,11 +128,23 @@ Provides both `Close` and `Adj Close`. The divergence between them across fetch 
 mechanism for demonstrating retroactive adjustment. Unofficial and fragile — keep it strictly
 behind the `PriceSource` interface so it can be swapped.
 
-### 4.3 Stooq — prices (secondary, for reconciliation)
+### 4.3 Tiingo — prices (secondary, for reconciliation)
 
-CSV endpoint, e.g. `https://stooq.com/q/d/l/?s=aapl.us&i=d`. Used only as an independent
-opinion to reconcile against. Expect it to disagree with yfinance on some days — that
-disagreement is a feature of this project, not a bug to eliminate.
+**Amended at M2.** The spec originally named Stooq's CSV endpoint
+(`https://stooq.com/q/d/l/?s=aapl.us&i=d`) here. As of the M2 build, that endpoint sits behind
+a site-wide JavaScript proof-of-work bot challenge (a SHA-256 nonce search plus a `/__verify`
+callback), confirmed with multiple User-Agent strings — it is not a header/politeness issue,
+it is a deliberate anti-bot gate that a plain HTTP client cannot pass. Building a solver for
+that challenge would be automated bot-detection evasion against a control the vendor put there
+on purpose, so this project does not do that. See `docs/limitations.md`.
+
+Replaced with **Tiingo**'s free-tier EOD prices API:
+`https://api.tiingo.com/tiingo/daily/{ticker}/prices?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&token=API_TOKEN`.
+Requires a free account and API token (`PDW_TIINGO_API_TOKEN`, set via `.env`, never committed).
+Each row includes both `close` and `adjClose`, so — like yfinance — the divergence between them
+across fetch dates is available directly. Used only as an independent opinion to reconcile
+against yfinance; expect it to disagree on some days, which is a feature of this project, not a
+bug to eliminate.
 
 ---
 

@@ -14,6 +14,7 @@ dependencies = [
     "pydantic-settings>=2.14.2",
     "pyyaml>=6.0.3",
     "typer>=0.27.0",
+    "yfinance>=1.5.1",
 ]
 
 [project.scripts]
@@ -42,6 +43,11 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.11"
 strict = true
 files = ["src"]
+
+[[tool.mypy.overrides]]
+# yfinance ships no type stubs / py.typed marker.
+module = "yfinance.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
