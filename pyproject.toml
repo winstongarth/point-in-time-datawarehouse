@@ -40,7 +40,12 @@ src = ["src"]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 
 [tool.mypy]
-python_version = "3.11"
+# Not this project's real floor (pyproject.toml's requires-python is 3.11) -
+# numpy's own stubs (pulled in transitively by polars) use PEP 695 `type`
+# statement syntax that mypy refuses to parse below 3.12, regardless of
+# follow_imports settings. Bumped here only to unblock that; nothing in
+# src/ intentionally relies on 3.12+ syntax.
+python_version = "3.12"
 strict = true
 files = ["src"]
 
@@ -48,6 +53,13 @@ files = ["src"]
 # yfinance ships no type stubs / py.typed marker.
 module = "yfinance.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# numpy's own stubs (pulled in transitively by polars) use PEP 695 `type`
+# statement syntax that requires python_version >= 3.12 to parse, which
+# breaks checking against this project's 3.11 target. Not our code to fix.
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 import psycopg
@@ -13,6 +13,11 @@ from pdw.sources import normalize_ticker_for_vendor
 from pdw.sources.edgar import parse_ticker_map
 
 logger = logging.getLogger(__name__)
+
+# See _upsert_entities_and_tickers: a brand-new entity's first-ever ticker
+# mapping opens here rather than at ingestion time. Comfortably before any
+# XBRL data this project will encounter (EDGAR's XBRL mandate began ~2009).
+_SENTINEL_KNOWLEDGE_FROM = datetime(2000, 1, 1, tzinfo=UTC)
 
 
 @dataclass(frozen=True)
@@ -257,8 +262,18 @@ def _upsert_entities_and_tickers(
     """Insert new entities, refresh their name, and open/close ticker
     mappings as needed (CLAUDE.md 5: entity_ticker is bitemporal).
 
-    `knowledge_from` is when we fetched the ticker map, not a true historical
-    reassignment date - SEC's map is current-state-only (docs/limitations.md).
+    `knowledge_from` (the ticker map's fetch time) is used only when a
+    *reassignment* is actually detected - that moment is genuinely when we
+    learned about the change, and can't honestly be backdated. A brand-new
+    entity's *first* ticker mapping instead opens at `_SENTINEL_KNOWLEDGE_FROM`
+    (CLAUDE.md 5 M5 amendment): SEC's map is current-state-only
+    (docs/limitations.md), so there is no true historical assignment date to
+    recover, but gating every point-in-time read on "when we happened to
+    first fetch the map" would make PointInTimeReader return nothing at all
+    for any as_of before this project's own first ingestion run - which would
+    silently break M7's entire premise of reading at historical rebalance
+    dates. Treating the mapping as "always true" absent better information
+    is the more useful reading of the same documented limitation.
     """
     for cik, ticker in ticker_by_cik.items():
         name = entity_names_by_cik.get(cik)
@@ -293,7 +308,7 @@ def _upsert_entities_and_tickers(
                     INSERT INTO core.entity_ticker (entity_id, ticker, knowledge_from)
                     VALUES (%s, %s, %s)
                     """,
-                    (entity_id, ticker, knowledge_from),
+                    (entity_id, ticker, _SENTINEL_KNOWLEDGE_FROM),
                 )
             elif open_row[0] != ticker:
                 cur.execute(

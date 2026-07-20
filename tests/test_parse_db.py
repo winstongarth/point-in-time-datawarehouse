@@ -106,6 +106,29 @@ def test_run_parse_populates_stg_and_entity(db_connection: psycopg.Connection) -
     assert open_ticker_count == 1
 
 
+def test_first_ticker_mapping_is_backdated_to_the_sentinel_not_ingestion_time(
+    db_connection: psycopg.Connection,
+) -> None:
+    """Regression test (M5 amendment, 2026-07-20): a brand-new entity's
+    first ticker mapping must open at the fixed historical sentinel, not
+    "when we happened to fetch the ticker map" - otherwise PointInTimeReader
+    returns nothing for any as_of before this project's own first ingestion
+    run, which would break M7's historical rebalance-date reads entirely.
+    """
+    _seed_aapl(db_connection)
+    mapping = load_metric_map(METRIC_MAP_PATH)
+
+    run_parse(db_connection, mapping, ["AAPL"])
+
+    with db_connection.cursor() as cur:
+        cur.execute(
+            "SELECT knowledge_from FROM core.entity_ticker WHERE ticker = 'AAPL'"
+        )
+        (knowledge_from,) = cur.fetchone()
+
+    assert knowledge_from == datetime(2000, 1, 1, tzinfo=UTC)
+
+
 def test_run_parse_still_creates_entity_for_ticker_with_zero_facts(
     db_connection: psycopg.Connection,
 ) -> None:

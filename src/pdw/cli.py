@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date, datetime
 from importlib.metadata import version as _package_version
 from pathlib import Path
 from typing import Annotated
@@ -133,3 +134,72 @@ def load_prices_command(
         f"inserted {summary.rows_inserted} new fact rows, "
         f"relinked {summary.rows_relinked} existing rows"
     )
+
+
+query_app = typer.Typer(help="Point-in-time reads against core (the only sanctioned read path).")
+app.add_typer(query_app, name="query")
+
+
+def _parse_as_of(as_of: str) -> datetime:
+    parsed = datetime.fromisoformat(as_of)
+    if parsed.tzinfo is None:
+        raise typer.BadParameter(
+            f"as_of must be timezone-aware, e.g. '2021-06-01T00:00:00+00:00' (got {as_of!r})"
+        )
+    return parsed
+
+
+@query_app.command("fundamentals")
+def query_fundamentals(
+    as_of: Annotated[
+        str, typer.Option("--as-of", help="Timezone-aware ISO 8601 timestamp")
+    ],
+    metrics: Annotated[
+        str, typer.Option("--metrics", help="Comma-separated metric codes")
+    ],
+    tickers: Annotated[
+        str | None, typer.Option("--tickers", help="Comma-separated tickers; omit for all")
+    ] = None,
+) -> None:
+    """Fundamentals as they were known at --as-of."""
+    import polars as pl
+
+    from pdw.db import get_connection
+    from pdw.query import PointInTimeReader
+
+    parsed_as_of = _parse_as_of(as_of)
+    metric_list = [m.strip() for m in metrics.split(",")]
+    ticker_list = [t.strip() for t in tickers.split(",")] if tickers else None
+
+    with get_connection() as conn:
+        reader = PointInTimeReader(conn, parsed_as_of)
+        df = reader.fundamentals(metric_list, ticker_list)
+
+    with pl.Config(tbl_rows=-1):
+        typer.echo(str(df))
+
+
+@query_app.command("prices")
+def query_prices(
+    as_of: Annotated[
+        str, typer.Option("--as-of", help="Timezone-aware ISO 8601 timestamp")
+    ],
+    tickers: Annotated[str, typer.Option("--tickers", help="Comma-separated tickers")],
+    start: Annotated[str, typer.Option("--start", help="YYYY-MM-DD")],
+    end: Annotated[str, typer.Option("--end", help="YYYY-MM-DD")],
+) -> None:
+    """Prices as they were known at --as-of."""
+    import polars as pl
+
+    from pdw.db import get_connection
+    from pdw.query import PointInTimeReader
+
+    parsed_as_of = _parse_as_of(as_of)
+    ticker_list = [t.strip() for t in tickers.split(",")]
+
+    with get_connection() as conn:
+        reader = PointInTimeReader(conn, parsed_as_of)
+        df = reader.prices(ticker_list, date.fromisoformat(start), date.fromisoformat(end))
+
+    with pl.Config(tbl_rows=-1):
+        typer.echo(str(df))

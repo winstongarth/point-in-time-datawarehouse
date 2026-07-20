@@ -376,6 +376,23 @@ non-overlapping knowledge ranges.
 original value and after returns the restated one. Property test: no returned row ever has
 `filed_date > as_of`, across randomized `as_of` samples.
 
+**Amended at M5.** `core.entity_ticker.knowledge_from` was originally set to the ticker map's
+fetch time (M3) for a brand-new entity's first-ever ticker mapping. Building the point-in-time
+reader surfaced why that breaks the whole project: `PointInTimeReader` applies its `as_of`
+predicate uniformly, including to `entity_ticker` resolution, so any `as_of` before this
+project's own first ingestion run resolved zero tickers — which would make M7's
+historical-rebalance-date reads return nothing at all. A ticker's first mapping now opens at
+a fixed sentinel (2000-01-01 UTC) instead: SEC's map is current-state-only regardless (a true
+historical assignment date was never recoverable), so treating it as "always true absent
+better information" is the more useful reading of that same limitation. A genuine
+*reassignment*, once one is ever detected, still opens at real detection time - see
+`src/pdw/parse.py`'s `_upsert_entities_and_tickers`. User sign-off 2026-07-20.
+
+Verified against the live DB with a real restatement, not just synthetic fixtures: GE's
+FY2011 revenue (CIK 0000040545) was originally reported as $147.3B (filed 2012-02-24) and
+restated down to $110.062B by 2016 (filed 2016-02-26, its sixth reported version).
+`as_of=2012-03-01` returns $147.3B; `as_of=2016-03-01` returns $110.062B.
+
 **M6 — Quality and reconciliation.** All eight checks, exception lifecycle (open → triage →
 close), coverage and profiling reports, auto-generated data dictionary written to
 `docs/dictionary/` from live schema + config.
