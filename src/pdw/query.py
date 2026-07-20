@@ -95,7 +95,21 @@ class PointInTimeReader:
 
         return _to_dataframe(rows, _FUNDAMENTALS_SCHEMA)
 
-    def prices(self, tickers: list[str], start: date, end: date) -> pl.DataFrame:
+    def prices(
+        self, tickers: list[str], start: date, end: date, source: str | None = None
+    ) -> pl.DataFrame:
+        """`source=None` (the default) returns every vendor's row for a
+        trade_date - multiple sources can hold independent, simultaneously-
+        valid rows for the same entity/date (CLAUDE.md 5's `core.price_fact`
+        note), which is exactly what the cross-vendor reconciliation check
+        needs. Any caller that wants exactly one price per ticker per day
+        (e.g. computing a return series) must pass `source` explicitly -
+        CLAUDE.md 4.2/4.3 designate yfinance primary and Tiingo secondary/
+        reconciliation-only, so `source="yfinance"` is the right default for
+        analysis code. Found live at M7: querying two tickers' prices after
+        M6 loaded Tiingo alongside yfinance returned 2 rows per trade_date
+        with no way to tell them apart without this parameter.
+        """
         query = """
             SELECT p.fact_id, p.entity_id, e.cik, t.ticker, p.trade_date,
                    p.open, p.high, p.low, p.close, p.volume, p.adj_close,
@@ -115,6 +129,9 @@ class PointInTimeReader:
             "start": start,
             "end": end,
         }
+        if source is not None:
+            query += " AND p.source = %(source)s"
+            params["source"] = source
         rows = self._fetch(query, params)
         return _to_dataframe(rows, _PRICES_SCHEMA)
 

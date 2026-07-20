@@ -76,7 +76,7 @@ def parse(
 
     coverage = compute_coverage(facts, ticker_by_cik, frozenset(mapping))
     report.parent.mkdir(parents=True, exist_ok=True)
-    report.write_text(render_coverage_report(coverage))
+    report.write_text(render_coverage_report(coverage), encoding="utf-8")
 
     typer.echo(
         f"parsed {summary.entities_parsed} entities, {summary.facts_written} facts; "
@@ -187,6 +187,14 @@ def query_prices(
     tickers: Annotated[str, typer.Option("--tickers", help="Comma-separated tickers")],
     start: Annotated[str, typer.Option("--start", help="YYYY-MM-DD")],
     end: Annotated[str, typer.Option("--end", help="YYYY-MM-DD")],
+    source: Annotated[
+        str | None,
+        typer.Option(
+            "--source",
+            help="Vendor to filter to (yfinance is primary per CLAUDE.md 4.2); "
+            "omit to see every source's row for a date, e.g. for cross-vendor comparison",
+        ),
+    ] = "yfinance",
 ) -> None:
     """Prices as they were known at --as-of."""
     import polars as pl
@@ -199,7 +207,9 @@ def query_prices(
 
     with get_connection() as conn:
         reader = PointInTimeReader(conn, parsed_as_of)
-        df = reader.prices(ticker_list, date.fromisoformat(start), date.fromisoformat(end))
+        df = reader.prices(
+            ticker_list, date.fromisoformat(start), date.fromisoformat(end), source=source
+        )
 
     with pl.Config(tbl_rows=-1):
         typer.echo(str(df))
@@ -302,3 +312,67 @@ def dictionary_generate(
     with get_connection() as conn:
         written = generate_dictionary(conn, out_dir)
     typer.echo(f"wrote {len(written)} dictionary files to {out_dir}")
+
+
+backtest_app = typer.Typer(help="The M7 experiment: point-in-time vs. latest-restated backtest.")
+app.add_typer(backtest_app, name="backtest")
+
+
+@backtest_app.command("run")
+def backtest_run(
+    universe: Annotated[
+        Path, typer.Option("--universe", help="Path to the universe YAML file")
+    ] = Path("config/universe.yaml"),
+    start: Annotated[
+        str, typer.Option("--start", help="First rebalance date, YYYY-MM-DD")
+    ] = "2017-01-01",
+    end: Annotated[
+        str, typer.Option("--end", help="Last rebalance date, YYYY-MM-DD")
+    ] = "2026-07-01",
+    out: Annotated[
+        Path, typer.Option("--out", help="Where to write the findings report")
+    ] = Path("docs/findings.md"),
+    chart_out: Annotated[
+        Path, typer.Option("--chart-out", help="Where to write the equity curve chart")
+    ] = Path("docs/findings_equity_curve.svg"),
+) -> None:
+    """Run the naive earnings-yield long/short twice (point-in-time and
+    latest) and write the comparison + case studies to --out."""
+    from pdw.backtest import (
+        compare_portfolios,
+        equity_curve,
+        find_case_studies,
+        generate_rebalance_dates,
+        render_equity_curve_svg,
+        render_findings_report,
+        run_backtest,
+    )
+    from pdw.db import get_connection
+    from pdw.ingest import load_universe
+
+    tickers = load_universe(universe)
+    rebalance_dates = generate_rebalance_dates(date.fromisoformat(start), date.fromisoformat(end))
+
+    with get_connection() as conn:
+        pit_run = run_backtest(conn, tickers, rebalance_dates, "point_in_time")
+        latest_run = run_backtest(conn, tickers, rebalance_dates, "latest")
+
+    differences = compare_portfolios(pit_run, latest_run)
+    case_studies = find_case_studies(differences, pit_run, latest_run)
+
+    chart_out.parent.mkdir(parents=True, exist_ok=True)
+    chart_out.write_text(
+        render_equity_curve_svg(equity_curve(pit_run), equity_curve(latest_run)),
+        encoding="utf-8",
+    )
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(
+        render_findings_report(pit_run, latest_run, differences, case_studies, chart_out.name),
+        encoding="utf-8",
+    )
+
+    typer.echo(
+        f"{len(pit_run.portfolios)} rebalances, {len(differences)} position differences, "
+        f"{len(case_studies)} case studies; report at {out}"
+    )

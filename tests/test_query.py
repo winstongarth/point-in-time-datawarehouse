@@ -268,6 +268,40 @@ def test_prices_reflects_retroactive_adjustment(db_connection: psycopg.Connectio
     assert after_df["adj_close"].to_list() == [5.25]
 
 
+def test_prices_returns_every_source_by_default_but_filters_when_asked(
+    db_connection: psycopg.Connection,
+) -> None:
+    """Regression: found live at M7 once Tiingo data existed alongside
+    yfinance for the same tickers - prices() had no source filter, so any
+    caller doing return-series arithmetic silently got 2 ambiguous rows per
+    trade_date. source=None must still return both (needed by the
+    cross-vendor check); source="yfinance" must return exactly one.
+    """
+    cik, ticker = "4444444408", "MULTISRC"
+    entity_id = _make_entity_with_ticker(db_connection, cik, ticker)
+    payload_id = _make_payload_id(db_connection)
+    trade_date = date(2024, 1, 2)
+    knowledge_from = datetime(2024, 1, 3, 13, 30, tzinfo=UTC)
+
+    _insert_price_fact(
+        db_connection, entity_id=entity_id, payload_id=payload_id, trade_date=trade_date,
+        knowledge_from=knowledge_from, close=100.0, adj_close=100.0, source="yfinance",
+    )
+    _insert_price_fact(
+        db_connection, entity_id=entity_id, payload_id=payload_id, trade_date=trade_date,
+        knowledge_from=knowledge_from, close=100.5, adj_close=100.5, source="tiingo",
+    )
+
+    reader = PointInTimeReader(db_connection, knowledge_from + timedelta(days=1))
+
+    both = reader.prices([ticker], trade_date, trade_date)
+    assert sorted(both["source"].to_list()) == ["tiingo", "yfinance"]
+
+    yf_only = reader.prices([ticker], trade_date, trade_date, source="yfinance")
+    assert yf_only["source"].to_list() == ["yfinance"]
+    assert yf_only["adj_close"].to_list() == [100.0]
+
+
 def test_ticker_resolution_respects_its_own_knowledge_window(
     db_connection: psycopg.Connection,
 ) -> None:

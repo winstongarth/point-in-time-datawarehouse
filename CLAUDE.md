@@ -299,6 +299,16 @@ Two guardrails:
 - The reader must **never** return a row whose `filed_date` is after `as_of`. Assert this in
   the reader itself, belt-and-braces alongside the DB constraint.
 
+**Amended at M7.** `prices()` gained an optional `source: str | None = None` keyword
+(`def prices(self, tickers, start, end, source=None)`), additive so the signature above still
+matches when `source` is omitted. Found live: once M6 loaded Tiingo alongside yfinance for the
+same tickers, `prices()` returned *two* rows per ticker per `trade_date` with no way to tell
+them apart — harmless for the cross-vendor check (which wants every source), but silently wrong
+for any caller doing return-series arithmetic expecting one price per day, including M7's
+backtest. `source=None` still returns every vendor's row (unchanged default); passing
+`source="yfinance"` (CLAUDE.md 4.2's primary price source) returns exactly one. `pdw query
+prices` defaults its own `--source` flag to `yfinance` for the same reason.
+
 ---
 
 ## 7. Reconciliation engine

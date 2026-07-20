@@ -155,7 +155,16 @@ def _insert_fundamental(
 
 
 def test_cross_vendor_price_no_data_passes_vacuously(db_connection: psycopg.Connection) -> None:
-    results = check_cross_vendor_price(db_connection, _RULES)
+    # Sources guaranteed to have zero rows in the shared session DB - other
+    # tests (including pdw.backtest's) legitimately seed realistic
+    # yfinance/tiingo price data, so asserting *global* emptiness for those
+    # two real source names would be order-dependent.
+    no_data_rules = [
+        {**_RULES[0], "left": {"source": "no_such_vendor_a", "field": "close"},
+         "right": {"source": "no_such_vendor_b", "field": "close"}}
+    ]
+
+    results = check_cross_vendor_price(db_connection, no_data_rules)
 
     assert len(results) == 1
     assert results[0].status == "pass"
@@ -183,7 +192,7 @@ def test_cross_vendor_price_matching_values_pass(db_connection: psycopg.Connecti
     _p(db_connection, entity_id, d, 100.0, "yfinance", payload_id)
     _p(db_connection, entity_id, d, 100.05, "tiingo", payload_id)
 
-    results = check_cross_vendor_price(db_connection, _RULES)
+    results = _only(check_cross_vendor_price(db_connection, _RULES), entity_id)
 
     assert len(results) == 1
     assert results[0].status == "pass"

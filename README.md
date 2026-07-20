@@ -73,8 +73,14 @@ ever deleted or overwritten in `core`.
 The capstone deliverable ([Milestone 7](#project-status--milestone-roadmap))
 runs a naive earnings-yield long/short backtest twice — once through
 point-in-time data, once through latest-restated data — and quantifies the
-performance gap this causes. That result will be summarized here once M7
-lands; see [docs/findings.md](docs/findings.md) (created at M7).
+performance gap this causes. Run live against the full 50-ticker universe
+(39 quarterly rebalances, 2017–2026): restatement alone changed **217**
+individual long/short positions across **38 of 39** rebalance dates,
+moving cumulative return from **-82.39%** (point-in-time) to **-80.87%**
+(latest-restated) — a modest net effect that nonetheless traces to 41
+specific, fact_id-linked restatements (META, GE, WFC, and others). Full
+comparison table, equity-curve chart, and case studies in
+[docs/findings.md](docs/findings.md).
 
 ### Availability lag
 
@@ -91,7 +97,7 @@ Five Postgres schemas, with a strict one-way data flow:
 flowchart LR
     EDGAR[SEC EDGAR] --> RAW
     YF[yfinance] --> RAW
-    STQ[Stooq] --> RAW
+    TIINGO[Tiingo] --> RAW
 
     RAW[("raw\n(immutable landing zone)")] --> STG[("stg\n(parsed, typed)")]
     STG --> CORE[("core\n(bitemporal facts)")]
@@ -162,7 +168,7 @@ Full schema DDL and rationale: [docs/architecture.md](docs/architecture.md)
 |---|---|---|
 | [SEC EDGAR](https://www.sec.gov/edgar/sec-api-documentation) `companyfacts` API | Fundamentals (primary) | Requires a descriptive `User-Agent` with a contact email; rate-limited to ≤10 req/s via a token-bucket limiter. `filed` date on every datapoint is what makes point-in-time reconstruction possible. |
 | [yfinance](https://github.com/ranaroussi/yfinance) | Prices (primary) | Unofficial and fragile — kept strictly behind a `PriceSource` interface. `Close` vs `Adj Close` divergence across fetch dates is the mechanism for demonstrating retroactive adjustment. |
-| [Stooq](https://stooq.com/) | Prices (secondary) | Independent opinion for cross-vendor reconciliation only. Expected to disagree with yfinance on some days — that disagreement is a feature, not a bug. |
+| [Tiingo](https://www.tiingo.com/) | Prices (secondary) | Independent opinion for cross-vendor reconciliation only (replaced Stooq, which turned out to sit behind a JS bot-detection challenge — see [docs/limitations.md](docs/limitations.md)). Reconciled on `adj_close`, not `close` — yfinance's `Close` is always split-adjusted by Yahoo's own backend, so it isn't comparable to Tiingo's raw quote for any ticker that's split within the fetch window. |
 
 A single logical metric can map to multiple XBRL tags across years and
 filers (e.g. revenue as `RevenueFromContractWithCustomerExcludingAssessedTax`,
@@ -180,12 +186,12 @@ start until then.
 | # | Milestone | Accept criteria | Status |
 |---|---|---|---|
 | M1 | Foundation — repo layout, `uv` project, Docker Postgres, Alembic, `ops.pipeline_run`, structured JSON logging, `typer` CLI skeleton, CI | `make up && make migrate && pdw --help` works from a clean clone | ✅ Done |
-| M2 | Raw ingestion — EDGAR + yfinance + Stooq adapters, rate limiting, retry, content-hash dedup | `pdw ingest --source edgar ...` populates `raw.payload` for 50 tickers; a second run adds fetch records but zero new hashes | ⬜ Planned |
-| M3 | Parse and normalize — XBRL → `stg`, metric map applied, entity/ticker mapping built | All 6 metrics present for ≥90% of expected entity-quarters; coverage report; `vendor_native_tag` populated everywhere | ⬜ Planned |
-| M4 | Bitemporal core loader — `stg` → `core` with correct knowledge-time handling | All 6 invariants hold under `pytest`; loader is idempotent; synthetic amendment fixture produces exactly 2 non-overlapping rows | ⬜ Planned |
-| M5 | Point-in-time reader — `PointInTimeReader` + `pdw query --as-of` | `as_of` before/after a known restatement returns original/restated value; property test: no row ever has `filed_date > as_of` | ⬜ Planned |
-| M6 | Quality and reconciliation — all 8 checks, exception lifecycle, auto-generated data dictionary | `pdw dq run` emits results for every check; seeded corruptions detected at correct severity; dictionary regenerates deterministically | ⬜ Planned |
-| M7 | The experiment — earnings-yield long/short, point-in-time vs. latest | `docs/findings.md` has the comparison table, equity-curve chart, and ≥3 traced case studies linked to `fact_id`/accession number | ⬜ Planned |
+| M2 | Raw ingestion — EDGAR + yfinance + Tiingo adapters, rate limiting, retry, content-hash dedup | `pdw ingest --source edgar ...` populates `raw.payload` for 50 tickers; a second run adds fetch records but zero new hashes | ✅ Done |
+| M3 | Parse and normalize — XBRL → `stg`, metric map applied, entity/ticker mapping built | All 6 metrics present for ≥90% of expected entity-quarters (accepted at 87.6%, see [docs/limitations.md](docs/limitations.md)); coverage report; `vendor_native_tag` populated everywhere | ✅ Done |
+| M4 | Bitemporal core loader — `stg` → `core` with correct knowledge-time handling | All 6 invariants hold under `pytest`; loader is idempotent; synthetic amendment fixture produces exactly 2 non-overlapping rows | ✅ Done |
+| M5 | Point-in-time reader — `PointInTimeReader` + `pdw query --as-of` | `as_of` before/after a known restatement returns original/restated value; property test: no row ever has `filed_date > as_of` | ✅ Done |
+| M6 | Quality and reconciliation — all 8 checks, exception lifecycle, auto-generated data dictionary | `pdw dq run` emits results for every check; seeded corruptions detected at correct severity; dictionary regenerates deterministically | ✅ Done |
+| M7 | The experiment — earnings-yield long/short, point-in-time vs. latest | `docs/findings.md` has the comparison table, equity-curve chart, and ≥3 traced case studies linked to `fact_id`/accession number | ✅ Done |
 | M8 | Operations layer — SLA/freshness monitoring, dependency DAG, post-mortems | `pdw ops status` shows per-feed freshness; `docs/runbook.md` gives triage steps per `BREAK` check | ⬜ Planned |
 
 Full milestone detail: [CLAUDE.md](CLAUDE.md#8-milestones).

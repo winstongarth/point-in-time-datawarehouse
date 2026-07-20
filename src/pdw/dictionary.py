@@ -109,7 +109,7 @@ def generate_dictionary(conn: psycopg.Connection, out_dir: Path) -> list[Path]:
         qualified = f"{schema}.{table}"
         columns = _list_columns(conn, schema, table)
         path = out_dir / f"{qualified}.md"
-        path.write_text(_render_table(qualified, columns))
+        path.write_text(_render_table(qualified, columns), encoding="utf-8")
         written.append(path)
     return sorted(written)
 
