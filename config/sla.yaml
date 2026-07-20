@@ -1,0 +1,24 @@
+# Per-feed operational SLA (CLAUDE.md 8, M8: "SLA definitions per feed").
+# Declared here, not in code, matching the project's pattern for
+# reconciliation.yaml/sources.yaml - a new feed's SLA is a config change,
+# not a code change.
+#
+# expected_refresh_days: how often this feed is normally re-ingested.
+# EDGAR fundamentals are quarterly; the two price feeds are daily. These
+# match dq_checks.py's _EXPECTED_REFRESH_DAYS (payload_freshness check),
+# which asks "did this feed change when a change was expected" - SLA here
+# asks the simpler, current-state question "is the last fetch itself
+# recent enough right now."
+#
+# max_staleness_days: past this, the feed is in BREACH (not just STALE) -
+# `pdw ops status` and the dependency DAG's blast-radius highlighting both
+# key off this threshold.
+- source: edgar
+  expected_refresh_days: 90
+  max_staleness_days: 120
+- source: yfinance
+  expected_refresh_days: 1
+  max_staleness_days: 5
+- source: tiingo
+  expected_refresh_days: 1
+  max_staleness_days: 5

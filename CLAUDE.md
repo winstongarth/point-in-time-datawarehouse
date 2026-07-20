@@ -445,6 +445,17 @@ encountered during the build. Prefect only if the Makefile has demonstrably run 
 *Accept:* `pdw ops status` shows per-feed freshness against SLA; `docs/runbook.md` gives triage
 steps for each `BREAK` severity check.
 
+**Amended at M8.** The Makefile has not run out of road — three sources, a handful of CLI
+commands, and cron-style manual/scheduled invocation cover this project's actual orchestration
+needs with no missing retry/scheduling/dependency-ordering capability the Makefile lacks.
+Prefect was not added. `config/sla.yaml` (per-feed `expected_refresh_days`/`max_staleness_days`),
+`pdw ops status` (per-feed freshness), `pdw ops deps` (a hand-maintained dependency DAG,
+CLAUDE.md 8's own `DEPENDENCY_EDGES`, rendered as mermaid with blast-radius highlighting for
+any feed currently stale/in-breach), `docs/postmortems.md` (three real incidents: M4's Verizon
+period_start collision, M5's entity_ticker sentinel bug, M6's silently-incomplete price
+ingestion), and `docs/runbook.md` (triage steps for the three `BREAK`-capable checks) — no
+new schema; this milestone is entirely an application/docs layer over what M1-M7 already built.
+
 ---
 
 ## 9. Testing

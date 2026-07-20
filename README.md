@@ -266,10 +266,12 @@ accordingly, not as an afterthought:
 
 | Doc | Contents | Lands at |
 |---|---|---|
-| [docs/architecture.md](docs/architecture.md) | Schema flow, bitemporal model, sequence diagram of a restatement | M4 |
+| [docs/architecture.md](docs/architecture.md) | Schema flow, bitemporal model, sequence diagram of a restatement | M8 (written; see [postmortems](docs/postmortems.md)) |
 | [docs/dictionary/](docs/dictionary/) | Auto-generated per-dataset field/type/source/nullability/caveat reference, regenerated from live schema + config | M6 |
 | [docs/findings.md](docs/findings.md) | The M7 experiment: numbers, equity curves, traced case studies | M7 |
 | [docs/runbook.md](docs/runbook.md) | Triage procedure and escalation path per `dq` check | M8 |
+| [docs/postmortems.md](docs/postmortems.md) | Three real failures hit during this build, root-caused | M8 |
+| [docs/dependency_dag.md](docs/dependency_dag.md) | Feed → table → check/consumer dependency graph, blast-radius-highlighted by current SLA status (`pdw ops deps`) | M8 |
 | [docs/limitations.md](docs/limitations.md) | What this project deliberately does not attempt, stated plainly | Available now |
 
 ## Scope and limitations
