@@ -234,9 +234,9 @@ core.price_fact (
 
 Enforce these as database constraints and as `pytest` assertions over the live database:
 
-1. **No knowledge-time overlap.** For any `(entity_id, metric_code, period_end, source)`, the
-   `[knowledge_from, knowledge_to)` ranges must not overlap. Enforce with a `tstzrange`
-   `EXCLUDE USING gist` constraint — not application logic.
+1. **No knowledge-time overlap.** For any `(entity_id, metric_code, period_start, period_end,
+   source)`, the `[knowledge_from, knowledge_to)` ranges must not overlap. Enforce with a
+   `tstzrange` `EXCLUDE USING gist` constraint — not application logic.
 2. **Exactly one open row.** At most one row per key has `knowledge_to = 'infinity'`.
 3. **`knowledge_from` ≥ `filed_date` + `availability_lag`.** Check constraint.
 4. **`knowledge_from` < `knowledge_to`.** Check constraint.
@@ -244,6 +244,17 @@ Enforce these as database constraints and as `pytest` assertions over the live d
 6. **`raw` is append-only.** Enforce with a `BEFORE UPDATE OR DELETE` trigger that raises.
 
 Invariant 1 is the heart of the project. If it can be violated, the warehouse is worthless.
+
+**Amended at M4.** The key was originally `(entity_id, metric_code, period_end, source)`,
+without `period_start`. Live EDGAR data (a Verizon 10-Q, accession `0000732712-19-000052`)
+showed why that's wrong: it reports revenue for *both* the 3-month quarter and the 6-month
+year-to-date window ending on the same `period_end`, under the same accession — two genuinely
+different, simultaneously-true facts, not one restating the other. Keying on `period_end`
+alone collided them and broke invariant 4. `period_start` disambiguates duration concepts
+(revenue, cash flow); for instant concepts (`Assets`, `StockholdersEquity`) it's `NULL` on
+both sides of any real collision, so the `EXCLUDE` constraint coalesces it to a fixed sentinel
+rather than comparing raw `NULL`s (which Postgres treats as never equal, silently defeating the
+constraint for exactly the rows most likely to collide) — see `migrations/sql/0004_core_facts.sql`.
 
 ### `dq` and `ops`
 

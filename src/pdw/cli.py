@@ -88,3 +88,48 @@ def parse(
         typer.echo(
             f"no companyfacts payload for: {', '.join(summary.tickers_without_companyfacts)}"
         )
+
+
+@app.command(name="load-fundamentals")
+def load_fundamentals_command(
+    sources_config: Annotated[
+        Path, typer.Option("--sources-config", help="Path to the source-availability YAML file")
+    ] = Path("config/sources.yaml"),
+) -> None:
+    """Promote stg.edgar_fundamental_fact into the bitemporal core.fundamental_fact."""
+    from pdw.availability import load_source_availability
+    from pdw.db import get_connection
+    from pdw.load_fundamentals import load_fundamentals
+
+    availability = load_source_availability(sources_config)["edgar"]
+    with get_connection() as conn:
+        summary = load_fundamentals(conn, availability)
+
+    typer.echo(
+        f"processed {summary.keys_processed} (entity, metric, period) keys; "
+        f"inserted {summary.rows_inserted} new fact rows, "
+        f"relinked {summary.rows_relinked} existing rows"
+    )
+
+
+@app.command(name="load-prices")
+def load_prices_command(
+    source: Annotated[str, typer.Option("--source", help="yfinance | tiingo")],
+    sources_config: Annotated[
+        Path, typer.Option("--sources-config", help="Path to the source-availability YAML file")
+    ] = Path("config/sources.yaml"),
+) -> None:
+    """Promote raw price payloads for `source` into the bitemporal core.price_fact."""
+    from pdw.availability import load_source_availability
+    from pdw.db import get_connection
+    from pdw.load_prices import load_prices
+
+    availability = load_source_availability(sources_config)[source]
+    with get_connection() as conn:
+        summary = load_prices(conn, source, availability)
+
+    typer.echo(
+        f"processed {summary.keys_processed} tickers; "
+        f"inserted {summary.rows_inserted} new fact rows, "
+        f"relinked {summary.rows_relinked} existing rows"
+    )
