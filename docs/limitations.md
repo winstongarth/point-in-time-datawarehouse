@@ -49,4 +49,24 @@ Stated plainly, up front, rather than left for a reviewer to discover:
     across many companies (typically sparse tagging in a company's earliest
     XBRL-era history), not a systemic issue.
 
+- **yfinance's `Close` is not a raw, vendor-comparable price (M6).** Confirmed live: Yahoo
+  Finance's own backend always retroactively split-adjusts `Close` (and the rest of OHLC),
+  regardless of the `auto_adjust` fetch flag. For any ticker that splits within the fetched
+  10-year window, `close` for dates before the split reflects the *post-split* scale, not what
+  actually traded that day. Only `adj_close` is comparable across yfinance and Tiingo; the
+  cross-vendor reconciliation check (CLAUDE.md 7) compares `adj_close` for this reason, and
+  `close` should not be treated as a stable, vendor-independent quantity for split-affected names.
+- **Cross-vendor `adj_close` agreement is real but not exact (M6).** yfinance and Tiingo each
+  compute their own dividend/split adjustment factors; two independent derivations of the same
+  concept don't match to fractions of a percent. Live, the full-universe disagreement band tops
+  out at 1.377% relative difference (median 0.34%) with no outliers suggesting real corruption —
+  `config/reconciliation.yaml`'s tolerance (1.5%) is set to clear that expected band while
+  staying far tighter than any genuine defect (a decimal shift is a ~900% diff). See CLAUDE.md 7.
+- **`pdw ingest`/`pdw load-prices` must be run for every source before `pdw dq run` is
+  meaningful (M6).** Price ingestion for the full 50-ticker universe was never actually run
+  during M2-M5 (only a 2-ticker smoke test existed for yfinance; Tiingo had zero rows) — earlier
+  milestones' live verification happened to only need EDGAR fundamentals. `pdw dq run`'s
+  cross-vendor and staleness checks vacuously pass with "no comparable rows yet" when a source
+  hasn't been ingested, rather than erroring, so this is easy to miss silently.
+
 This list will grow as later milestones surface further caveats worth naming.

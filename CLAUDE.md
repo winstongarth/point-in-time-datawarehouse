@@ -316,6 +316,27 @@ Cross-vendor comparison producing `dq.exception` rows. Rules declared in
   escalate_if: {consecutive_days: 3, severity: BREAK}
 ```
 
+**Amended at M6.** The live `config/reconciliation.yaml` differs from the illustration above in
+two ways, both found only once run against the full 50-ticker universe with real Tiingo data:
+
+- **`field: adj_close`, not `close`.** yfinance's `Close` is always split-adjusted by Yahoo's own
+  backend regardless of the `auto_adjust` fetch flag (confirmed live: AVGO's pre-2024-07-15-split
+  dates already read in post-split scale), while Tiingo's `close` is the true raw historical
+  quote. The two vendors' `close` fields are not the same quantity for any split-affected ticker
+  and never converge — comparing them cross-vendor showed a permanent, unfixable ~10x
+  "mismatch" for that ticker's entire pre-split history. `adj_close` is the field both vendors
+  define the same way and agree on closely (confirmed live: AVGO 2024-07-01 — yfinance 161.051
+  vs Tiingo 161.079). This also uncovered that `check_cross_vendor_price` had been silently
+  ignoring the rule's `field` key entirely and always comparing `close` — fixed alongside the
+  config change.
+- **`tolerance: 0.015`, not `0.001`.** `adj_close` is *derived*, not quoted — each vendor computes
+  its own dividend/split adjustment factors, so two independent derivations don't match to 0.1%.
+  The live run showed ~12,600 dates failing a 0.1% tolerance with relative differences maxing out
+  at 1.377% (median 0.34%) and zero outliers suggesting real corruption — a tight, bounded band
+  consistent with adjustment-methodology drift between vendors, not a defect. 1.5% clears that
+  whole observed band while staying far tighter than any genuine error would produce (a decimal
+  shift is a ~900% diff). User sign-off 2026-07-20.
+
 Required checks:
 
 | Check | Type | Severity |

@@ -203,3 +203,102 @@ def query_prices(
 
     with pl.Config(tbl_rows=-1):
         typer.echo(str(df))
+
+
+dq_app = typer.Typer(help="Data quality checks and exception triage.")
+app.add_typer(dq_app, name="dq")
+
+
+@dq_app.command("run")
+def dq_run(
+    reconciliation_config: Annotated[
+        Path,
+        typer.Option("--reconciliation-config", help="Path to the reconciliation rules YAML"),
+    ] = Path("config/reconciliation.yaml"),
+) -> None:
+    """Run all 8 quality checks; writes dq.check_result and updates dq.exception."""
+    from pdw.db import get_connection
+    from pdw.dq_engine import run_all_checks
+
+    with get_connection() as conn:
+        summary = run_all_checks(conn, reconciliation_config)
+
+    typer.echo(
+        f"{summary.total_checks} check results: {summary.passed} passed, "
+        f"{summary.failed} failed {summary.by_severity_fail or ''}"
+    )
+
+
+@dq_app.command("status")
+def dq_status() -> None:
+    """List currently open/in-triage exceptions."""
+    from pdw.db import get_connection
+
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT ex.exception_id, cr.check_name, ex.dimension_key, ex.severity,
+                   ex.status, ex.opened_at::text
+            FROM dq.exception ex
+            JOIN dq.check_result cr ON cr.check_id = ex.check_id
+            WHERE ex.status IN ('open', 'triage')
+            ORDER BY ex.severity DESC, ex.opened_at
+            """
+        )
+        rows = cur.fetchall()
+
+    if not rows:
+        typer.echo("no open exceptions")
+        return
+    for exception_id, check_name, dimension_key, severity, status, opened_at in rows:
+        typer.echo(
+            f"[{exception_id}] {severity} {status} {check_name} {dimension_key} "
+            f"(opened {opened_at})"
+        )
+
+
+@dq_app.command("triage")
+def dq_triage(
+    exception_id: Annotated[int, typer.Argument()],
+    note: Annotated[str, typer.Option("--note")],
+) -> None:
+    """Move an open exception to triage."""
+    from pdw.db import get_connection
+    from pdw.dq_engine import triage_exception
+
+    with get_connection() as conn:
+        triage_exception(conn, exception_id, note)
+    typer.echo(f"exception {exception_id} moved to triage")
+
+
+@dq_app.command("resolve")
+def dq_resolve(
+    exception_id: Annotated[int, typer.Argument()],
+    note: Annotated[str, typer.Option("--note")],
+) -> None:
+    """Manually close an open or in-triage exception."""
+    from pdw.db import get_connection
+    from pdw.dq_engine import resolve_exception
+
+    with get_connection() as conn:
+        resolve_exception(conn, exception_id, note)
+    typer.echo(f"exception {exception_id} resolved")
+
+
+dictionary_app = typer.Typer(help="Auto-generated data dictionary.")
+app.add_typer(dictionary_app, name="dictionary")
+
+
+@dictionary_app.command("generate")
+def dictionary_generate(
+    out_dir: Annotated[
+        Path, typer.Option("--out", help="Output directory")
+    ] = Path("docs/dictionary"),
+) -> None:
+    """Regenerate docs/dictionary/ from the live schema."""
+    from pdw.db import get_connection
+    from pdw.dictionary import generate_dictionary
+
+    with get_connection() as conn:
+        written = generate_dictionary(conn, out_dir)
+    typer.echo(f"wrote {len(written)} dictionary files to {out_dir}")
