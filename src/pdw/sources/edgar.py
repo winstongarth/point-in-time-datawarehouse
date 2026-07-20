@@ -46,7 +46,7 @@ class EdgarSource:
             )
             return
 
-        cik_by_ticker = _parse_ticker_map(ticker_map_result.body)
+        cik_by_ticker = parse_ticker_map(ticker_map_result.body)
 
         for ticker in tickers:
             normalized = normalize_ticker_for_vendor(ticker)
@@ -99,7 +99,7 @@ class EdgarSource:
         return retry_with_backoff(_do, retry_on=(urllib.error.URLError,))
 
 
-def _parse_ticker_map(body: bytes) -> dict[str, str]:
+def parse_ticker_map(body: bytes) -> dict[str, str]:
     data = json.loads(body)
     result: dict[str, str] = {}
     for entry in data.values():

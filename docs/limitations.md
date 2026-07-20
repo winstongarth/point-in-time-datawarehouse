@@ -30,4 +30,23 @@ Stated plainly, up front, rather than left for a reviewer to discover:
   [Tiingo](https://www.tiingo.com/)'s free-tier EOD prices API. See
   CLAUDE.md 4.3.
 
+- **Fundamentals coverage lands at 87.6%, not the ≥90% target (M3).** Verified
+  live against the full 50-ticker universe. Two specific, diagnosed causes
+  account for most of the shortfall, neither fixable by adding more tags to
+  `config/metric_map.yaml` without guessing at unverified proxies:
+  - **Bank holding companies have no unified "Revenue" GAAP concept.**
+    WFC, JPM, and BAC report net interest income and fee income as separate
+    line items; there is no single XBRL tag equivalent to an industrial
+    company's "Revenue". Their real reported `Revenues` tag (where present)
+    covers only part of their filing history.
+  - **A few large-caps have no XBRL fact for diluted shares outstanding
+    for most of their history, under any tag, in any taxonomy namespace.**
+    Confirmed for BRK.B (dual-class share structure) and GOOGL (its
+    `WeightedAverageNumberOfDilutedSharesOutstanding` fact only starts in
+    fiscal 2024 in the data fetched; no other `dei`/`us-gaap`/`ecd`/`ffd`
+    fact in its companyfacts response covers the earlier years).
+  - The remaining shortfall is scattered 1-4-entity-quarter edge cases
+    across many companies (typically sparse tagging in a company's earliest
+    XBRL-era history), not a systemic issue.
+
 This list will grow as later milestones surface further caveats worth naming.

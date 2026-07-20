@@ -342,6 +342,17 @@ bitemporal ticker mapping built.
 *Accept:* all 6 metrics present for ≥90% of expected entity-quarters; a coverage report names
 every gap; `vendor_native_tag` populated on every row.
 
+**Amended at M3.** Live against the full 50-ticker universe, coverage landed at 87.6%, not
+≥90%, after three verified metric-map fixes (tag-switch-mid-history handling, an ABBV-style
+net-income variant, pre-ASC-606 goods/services revenue tags — see `config/metric_map.yaml`'s
+own comments). The remaining gap was diagnosed, not patched over: bank holding companies
+(WFC, JPM, BAC, ...) have no unified GAAP "Revenue" concept at all, and a handful of large-caps
+(BRK.B, GOOGL) genuinely have no XBRL fact for diluted shares outstanding for most of their
+history under any tag in any taxonomy namespace present in their companyfacts response. Adding
+more tags to close this gap further would mean guessing at unverified proxies, which is worse
+than an honest, documented shortfall. Accepted at 87.6% with the cause named, per user sign-off
+2026-07-20 — see `docs/limitations.md`.
+
 **M4 — Bitemporal core loader.** The centerpiece. Promotes `stg` → `core` with correct
 knowledge-time handling: new facts open a window, restatements close the prior window and open a
 successor with `supersedes` set, unchanged facts are no-ops.

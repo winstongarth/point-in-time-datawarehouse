@@ -1,0 +1,53 @@
+# Priority-ordered XBRL tag mapping per canonical fundamental metric
+# (CLAUDE.md 4.1 and 2). For a given entity/period, the first tag in the
+# list that has a datapoint *in the declared unit* wins. Whichever tag was
+# actually used is recorded in vendor_native_tag on every stg/core row, so a
+# filer switching tags mid-history stays visible in the data rather than
+# being smoothed over.
+#
+# Verified against a live AAPL companyfacts fetch (2026-07-20): all six tags
+# below are present for AAPL in exactly the unit listed. The lowest-priority
+# fallback on net_income and shares_outstanding_diluted was added after
+# running this against the full 50-ticker universe live: ABBV, for example,
+# reports 2013-2016 net income only under NetIncomeLossAvailableToCommon
+# StockholdersBasic, not NetIncomeLoss/ProfitLoss at all for that span.
+
+revenue:
+  unit: USD
+  tags:
+    - RevenueFromContractWithCustomerExcludingAssessedTax
+    - RevenueFromContractWithCustomerIncludingAssessedTax
+    - Revenues
+    - SalesRevenueNet
+    - SalesRevenueGoodsNet
+    - SalesRevenueServicesNet
+
+net_income:
+  unit: USD
+  tags:
+    - NetIncomeLoss
+    - ProfitLoss
+    - NetIncomeLossAvailableToCommonStockholdersBasic
+
+total_assets:
+  unit: USD
+  tags:
+    - Assets
+
+total_equity:
+  unit: USD
+  tags:
+    - StockholdersEquity
+    - StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest
+
+shares_outstanding_diluted:
+  unit: shares
+  tags:
+    - WeightedAverageNumberOfDilutedSharesOutstanding
+    - WeightedAverageNumberOfSharesOutstandingBasic
+
+operating_cash_flow:
+  unit: USD
+  tags:
+    - NetCashProvidedByUsedInOperatingActivities
+    - NetCashProvidedByUsedInOperatingActivitiesContinuingOperations

@@ -46,3 +46,45 @@ def ingest(
     adapter = build_source(source)
     with get_connection() as conn:
         run_ingest(conn, adapter, tickers)
+
+
+@app.command()
+def parse(
+    universe: Annotated[
+        Path, typer.Option("--universe", help="Path to the universe YAML file")
+    ] = Path("config/universe.yaml"),
+    metric_map: Annotated[
+        Path, typer.Option("--metric-map", help="Path to the metric map YAML file")
+    ] = Path("config/metric_map.yaml"),
+    report: Annotated[
+        Path, typer.Option("--report", help="Where to write the coverage report")
+    ] = Path("reports/coverage_report.md"),
+) -> None:
+    """Parse the latest EDGAR raw payloads into stg and core.entity/entity_ticker."""
+    from pdw.coverage import compute_coverage, render_coverage_report
+    from pdw.db import get_connection
+    from pdw.ingest import load_universe
+    from pdw.metric_map import load_metric_map
+    from pdw.parse import run_parse
+
+    tickers = load_universe(universe)
+    mapping = load_metric_map(metric_map)
+
+    with get_connection() as conn:
+        summary, facts, ticker_by_cik = run_parse(conn, mapping, tickers)
+
+    coverage = compute_coverage(facts, ticker_by_cik, frozenset(mapping))
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text(render_coverage_report(coverage))
+
+    typer.echo(
+        f"parsed {summary.entities_parsed} entities, {summary.facts_written} facts; "
+        f"coverage {coverage.coverage_pct:.1f}% ({coverage.fully_covered}/"
+        f"{coverage.total_entity_quarters} entity-quarters); report at {report}"
+    )
+    if summary.tickers_without_cik:
+        typer.echo(f"no CIK found for: {', '.join(summary.tickers_without_cik)}")
+    if summary.tickers_without_companyfacts:
+        typer.echo(
+            f"no companyfacts payload for: {', '.join(summary.tickers_without_companyfacts)}"
+        )
