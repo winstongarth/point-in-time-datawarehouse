@@ -6,8 +6,11 @@ services:
       POSTGRES_USER: pdw
       POSTGRES_PASSWORD: pdw
       POSTGRES_DB: pdw
+    # Published as 5433 on the host: this machine already runs a native
+    # PostgreSQL service on 5432 for other purposes, and 5433 avoids clashing
+    # with it. The container's own internal port is still 5432.
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pdw-postgres-data:/var/lib/postgresql/data
     healthcheck:

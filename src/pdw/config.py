@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="PDW_", extra="ignore")
 
-    database_url: str = "postgresql://pdw:pdw@localhost:5432/pdw"
+    database_url: str = "postgresql://pdw:pdw@localhost:5433/pdw"
     edgar_contact_email: str = "set-me@example.com"
     log_level: str = "INFO"
     environment: str = "development"

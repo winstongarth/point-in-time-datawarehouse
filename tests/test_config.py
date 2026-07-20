@@ -16,7 +16,7 @@ def _clear_pdw_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_defaults_construct_without_any_env_file() -> None:
     settings = Settings(_env_file=None)
 
-    assert settings.database_url == "postgresql://pdw:pdw@localhost:5432/pdw"
+    assert settings.database_url == "postgresql://pdw:pdw@localhost:5433/pdw"
     assert settings.edgar_contact_email == "set-me@example.com"
     assert settings.log_level == "INFO"
 
