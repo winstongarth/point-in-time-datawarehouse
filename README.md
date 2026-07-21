@@ -145,22 +145,6 @@ Direct `SELECT` against `core` from analysis code is considered a bug.
 
 Full schema DDL and rationale: [docs/architecture.md](docs/architecture.md).
 
-## Tech stack
-
-| Concern | Choice | Note |
-|---|---|---|
-| Language | Python 3.11+ | |
-| Package manager | [`uv`](https://docs.astral.sh/uv/) | |
-| Database | PostgreSQL 15+ | Local, via Docker. Uses `tstzrange`, `jsonb`, `numeric`. |
-| DB access | `psycopg` 3 + hand-written SQL | No ORM — SQL is a demonstrated skill here. |
-| Migrations | Alembic (SQL-only revisions) | Hand-written SQL, versioned in `migrations/sql/`. |
-| Dataframes | `polars` | pandas only where a library forces it. |
-| CLI | `typer` | |
-| Config | `pydantic-settings` + YAML | |
-| Testing | `pytest` | |
-| Lint/format/types | `ruff`, `mypy --strict` on `src/` | |
-| Orchestration | Makefile + cron initially | Prefect only if it earns its place at M8. |
-
 ## Data sources
 
 | Source | Role | Notes |
