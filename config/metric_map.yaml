@@ -1,6 +1,6 @@
-# Priority-ordered XBRL tag mapping per canonical fundamental metric
-# (CLAUDE.md 4.1 and 2). For a given entity/period, the first tag in the
-# list that has a datapoint *in the declared unit* wins. Whichever tag was
+# Priority-ordered XBRL tag mapping per canonical fundamental metric. For a
+# given entity/period, the first tag in the list that has a datapoint *in
+# the declared unit* wins. Whichever tag was
 # actually used is recorded in vendor_native_tag on every stg/core row, so a
 # filer switching tags mid-history stays visible in the data rather than
 # being smoothed over.

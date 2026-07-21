@@ -13,7 +13,7 @@ from psycopg import sql
 
 @dataclass(frozen=True)
 class CheckResult:
-    """One row of dq.check_result. CLAUDE.md 7: every check writes a result
+    """One row of dq.check_result. Every check writes a result
     every run, including passes - `dimension_key` is what a failing result
     groups under in dq.exception across runs (e.g. a ticker, or
     ticker+period); non-entity-scoped summaries use "__global__".
@@ -182,8 +182,8 @@ def _escalate_consecutive_failures(
 # Liabilities + Equity as a single combined figure (the balance sheet's own
 # "Total liabilities and stockholders' equity" line). Using it means this
 # check needs no data beyond what's already in raw.payload - it deliberately
-# is *not* added to config/metric_map.yaml as a 7th tracked metric (CLAUDE.md
-# 2's "Fundamental metrics: 6" is a hard scope limit on what's queryable via
+# is *not* added to config/metric_map.yaml as a 7th tracked metric ("6
+# fundamental metrics" is a hard scope limit on what's queryable via
 # PointInTimeReader/the backtest); it's parsed here, once, purely as this
 # check's internal cross-validation input.
 _LIABILITIES_AND_EQUITY_TAG = "LiabilitiesAndStockholdersEquity"
@@ -519,8 +519,8 @@ def check_price_staleness(
 
 
 def _count_business_days_between(start: date, end: date) -> int:
-    """Weekday-only count (CLAUDE.md's NYSE-calendar checks share the same
-    documented simplification as pdw.availability: no holiday calendar)."""
+    """Weekday-only count - this project's NYSE-calendar checks share the same
+    documented simplification as pdw.availability: no holiday calendar."""
     if end <= start:
         return 0
     count = 0

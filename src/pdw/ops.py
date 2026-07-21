@@ -40,8 +40,7 @@ class FeedStatus:
 def compute_feed_status(
     conn: psycopg.Connection, sla_definitions: list[SlaDefinition], as_of: datetime | None = None
 ) -> list[FeedStatus]:
-    """Per-feed freshness against its own SLA (CLAUDE.md 8, M8: "`pdw ops
-    status` shows per-feed freshness against SLA"). A feed with zero
+    """Per-feed freshness against its own SLA. A feed with zero
     `raw.payload` rows at all is "no_data", not "breach" - those are
     different failure modes (a feed that's never been run vs. one that's
     stopped running) and the M6 postmortem is exactly about that
@@ -70,9 +69,9 @@ def compute_feed_status(
     return statuses
 
 
-# The pipeline's dependency structure (CLAUDE.md 8, M8: "a dependency DAG
-# showing blast radius of a feed failure") - static and hand-maintained,
-# not derived from the schema, because "which checks/consumers read this
+# The pipeline's dependency structure, for showing the blast radius of a
+# feed failure - static and hand-maintained, not derived from the schema,
+# because "which checks/consumers read this
 # table" isn't something information_schema can answer (same reasoning as
 # pdw.dictionary's hand-curated notes). Update this alongside any change
 # that adds a new consumer of core.fundamental_fact/core.price_fact.

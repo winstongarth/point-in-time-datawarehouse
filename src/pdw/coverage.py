@@ -27,7 +27,7 @@ class CoverageReport:
 def compute_coverage(
     facts: list[ParsedFact], ticker_by_cik: dict[str, str], expected_metrics: frozenset[str]
 ) -> CoverageReport:
-    """CLAUDE.md M3 accept criteria: all 6 metrics present for >=90% of
+    """Target: all 6 metrics present for >=90% of
     "entity-quarters" - every (cik, fiscal_year, fiscal_period) combination
     that appears anywhere in the parsed facts, regardless of which metric
     produced it.

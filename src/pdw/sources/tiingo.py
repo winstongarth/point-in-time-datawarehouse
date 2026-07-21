@@ -15,15 +15,13 @@ logger = logging.getLogger(__name__)
 
 PRICES_URL_TEMPLATE = "https://api.tiingo.com/tiingo/daily/{symbol}/prices"
 
-# CLAUDE.md 2: "History: 10 years or vendor availability, whichever is shorter."
+# History: 10 years or vendor availability, whichever is shorter.
 DEFAULT_HISTORY_YEARS = 10
 
-# Per https://api.tiingo.com/documentation/end-of-day (documented shape).
-# NOT yet verified against a live response — no Tiingo API token was
-# available in the session that wrote this adapter (CLAUDE.md 4.3 was
-# amended to add Tiingo after Stooq turned out to be bot-gated). Verify on
-# the first real run; if the shape differs, fix this set and fail loudly
-# rather than silently accept a different response (CLAUDE.md 11).
+# Per https://api.tiingo.com/documentation/end-of-day (documented shape),
+# confirmed against a real live response once an API token was available.
+# If the shape ever differs, fix this set and fail loudly
+# rather than silently accept a different response.
 _EXPECTED_KEYS = {
     "date",
     "close",
@@ -42,7 +40,7 @@ _EXPECTED_KEYS = {
 
 
 class TiingoSource:
-    """Tiingo EOD prices adapter (CLAUDE.md 4.3). Prices, secondary/reconciliation source.
+    """Tiingo EOD prices adapter. Prices, secondary/reconciliation source.
 
     Replaces the originally-specified Stooq CSV endpoint, which turned out to
     sit behind a JavaScript proof-of-work bot challenge incompatible with

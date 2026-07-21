@@ -566,7 +566,7 @@ def test_compute_earnings_yields_finds_a_price_with_realistic_availability_lag(
 ) -> None:
     """Regression: found live against the full 50-ticker universe - a full
     run produced *zero* rebalances. The real loader sets a price's
-    knowledge_from to trade_date + availability_lag (CLAUDE.md 1), not
+    knowledge_from to trade_date + availability_lag, not
     trade_date itself, so a fundamentals_as_of fixed at midnight of the
     rebalance date (correct for point-in-time fundamentals) can never see
     that same day's own price, or any later one - every rebalance's price

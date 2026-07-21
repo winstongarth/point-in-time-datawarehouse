@@ -28,7 +28,7 @@ class PriceRow:
 
 def parse_yfinance_csv(body: bytes) -> list[PriceRow]:
     """Parse the CSV this project's YFinanceSource writes as its raw.payload
-    body (CLAUDE.md 4.2's Close/Adj Close divergence lives in this shape)."""
+    body (the Close/Adj Close divergence lives in this shape)."""
     reader = csv.DictReader(io.StringIO(body.decode("utf-8")))
     rows = []
     for record in reader:
@@ -48,7 +48,7 @@ def parse_yfinance_csv(body: bytes) -> list[PriceRow]:
 
 
 def parse_tiingo_json(body: bytes) -> list[PriceRow]:
-    """Parse Tiingo's EOD prices JSON shape (CLAUDE.md 4.3)."""
+    """Parse Tiingo's EOD prices JSON shape."""
     data = json.loads(body)
     rows = []
     for point in data:
@@ -95,8 +95,8 @@ def load_prices(
 
     Unlike fundamentals, a single price fetch doesn't carry its own
     point-in-time history - it's a snapshot of *today's* view of history, so
-    detecting a retroactive adjustment (CLAUDE.md 1: "a vendor's
-    adjusted-close history for past dates silently changes") requires
+    detecting a retroactive adjustment (a vendor's adjusted-close history
+    for past dates silently changing) requires
     comparing *across* separate fetches taken at different real times, not
     within one payload. A trade_date's first-ever observed value is
     backdated to when it was actually knowable (trade_date + availability
@@ -244,7 +244,7 @@ def _reconcile(
     summary: LoadSummary,
 ) -> None:
     # No supersedes tracking here (unlike fundamentals): price_fact has no
-    # such column (CLAUDE.md 5) - each version stands on its own, linked
+    # such column - each version stands on its own, linked
     # only by (entity_id, trade_date, source) and its knowledge window.
     existing = _existing_rows(conn, entity_id, source, trade_date)
 

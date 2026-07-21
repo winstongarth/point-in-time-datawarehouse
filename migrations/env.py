@@ -14,9 +14,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# No ORM in this project (CLAUDE.md 3: "No ORM. SQL is a demonstrated skill
-# here") so there is no metadata for autogenerate to diff against. Every
-# revision is a hand-written SQL-only revision.
+# No ORM in this project - SQL is a demonstrated skill here - so there is
+# no metadata for autogenerate to diff against. Every revision is a
+# hand-written SQL-only revision.
 target_metadata = None
 
 # Single source of truth for the DSN is pdw.config.Settings (env / .env), not

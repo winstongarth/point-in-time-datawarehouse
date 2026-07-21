@@ -6,7 +6,7 @@ import time
 class TokenBucket:
     """A blocking token-bucket rate limiter.
 
-    EDGAR caps requests at 10/s (CLAUDE.md 4.1); this is what keeps an
+    EDGAR caps requests at 10/s; this is what keeps an
     adapter under that limit regardless of how fast its caller loops,
     without hardcoding the limit into the adapter itself.
     """

@@ -18,13 +18,13 @@ TICKER_MAP_URL = "https://www.sec.gov/files/company_tickers.json"
 COMPANYFACTS_URL_TEMPLATE = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 
 # Verified against a live fetch on 2026-07-20: each entry in company_tickers.json
-# has exactly these three keys. Fail loudly (CLAUDE.md 11) rather than silently
+# has exactly these three keys. Fail loudly rather than silently
 # skip a shape that no longer matches.
 _TICKER_MAP_ENTRY_KEYS = {"cik_str", "ticker", "title"}
 
 
 class EdgarSource:
-    """SEC EDGAR company facts adapter (CLAUDE.md 4.1). Fundamentals, primary source."""
+    """SEC EDGAR company facts adapter. Fundamentals, primary source."""
 
     name = "edgar"
 

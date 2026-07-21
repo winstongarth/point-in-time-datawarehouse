@@ -174,7 +174,7 @@ def test_as_of_before_and_after_a_restatement(db_connection: psycopg.Connection)
 def test_as_of_exactly_at_knowledge_from_sees_the_new_value(
     db_connection: psycopg.Connection,
 ) -> None:
-    """knowledge_from <= as_of (inclusive) per CLAUDE.md 6's predicate."""
+    """knowledge_from <= as_of (inclusive) per the reader's predicate."""
     cik, ticker = "4444444402", "REST2"
     entity_id = _make_entity_with_ticker(db_connection, cik, ticker)
     payload_id = _make_payload_id(db_connection)
@@ -198,7 +198,7 @@ def test_as_of_exactly_at_knowledge_from_sees_the_new_value(
 def test_never_returns_a_row_with_filed_date_after_as_of(
     db_connection: psycopg.Connection,
 ) -> None:
-    """Property test (CLAUDE.md 6): across randomized as_of samples, no
+    """Property test: across randomized as_of samples, no
     returned row's filed_date is ever after as_of."""
     cik, ticker = "4444444403", "PROP1"
     entity_id = _make_entity_with_ticker(db_connection, cik, ticker)
@@ -305,7 +305,7 @@ def test_prices_returns_every_source_by_default_but_filters_when_asked(
 def test_ticker_resolution_respects_its_own_knowledge_window(
     db_connection: psycopg.Connection,
 ) -> None:
-    """entity_ticker is itself bitemporal (CLAUDE.md 5) - the reader must
+    """entity_ticker is itself bitemporal - the reader must
     not resolve a ticker to an entity before that mapping was known."""
     cik, ticker = "4444444405", "LATETICKER"
     ticker_known_from = datetime(2022, 1, 1, tzinfo=UTC)

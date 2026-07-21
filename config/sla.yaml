@@ -1,5 +1,4 @@
-# Per-feed operational SLA (CLAUDE.md 8, M8: "SLA definitions per feed").
-# Declared here, not in code, matching the project's pattern for
+# Per-feed operational SLA. Declared here, not in code, matching the project's pattern for
 # reconciliation.yaml/sources.yaml - a new feed's SLA is a config change,
 # not a code change.
 #

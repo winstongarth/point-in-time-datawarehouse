@@ -1,6 +1,6 @@
 -- dq.check_result: every check writes a row every run, including passes
--- (CLAUDE.md 7: "A check that only records failures cannot support a
--- coverage metric").
+-- (a check that only records failures cannot support a
+-- coverage metric).
 CREATE TABLE dq.check_result (
     check_id     bigserial   PRIMARY KEY,
     check_name   text        NOT NULL,

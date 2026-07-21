@@ -18,7 +18,7 @@ SOURCE = "edgar"
 class ChainLink:
     """One genuine version of a (entity, metric, period) fact - a value that
     was actually new when it was filed, not just a routine re-report of an
-    already-known figure (CLAUDE.md 5: "unchanged facts are no-ops")."""
+    already-known figure (unchanged facts are no-ops)."""
 
     accession_no: str
     filed_date: date
@@ -52,11 +52,11 @@ def load_fundamentals(conn: psycopg.Connection, availability: SourceAvailability
     rather than only ever appending, is what makes a second run with
     unchanged input a genuine no-op.
 
-    period_start is part of the key, not just period_end - CLAUDE.md 5's
-    amendment note (M4): a single accession can report more than one
-    duration ending on the same date (e.g. a 10-Q's 3-month and 6-month
-    revenue figures both end June 30), and those are different,
-    simultaneously-true facts, not restatements of each other.
+    period_start is part of the key, not just period_end - a single
+    accession can report more than one duration ending on the same date
+    (e.g. a 10-Q's 3-month and 6-month revenue figures both end June 30),
+    and those are different, simultaneously-true facts, not restatements
+    of each other.
     """
     summary = LoadSummary()
 

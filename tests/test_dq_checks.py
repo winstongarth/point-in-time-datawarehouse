@@ -99,7 +99,7 @@ def _insert_price(
     conn.commit()
 
 
-# CLAUDE.md 5: period_start is NULL for instant concepts (Assets,
+# period_start is NULL for instant concepts (Assets,
 # StockholdersEquity, shares outstanding) and populated for duration ones
 # (revenue, net_income, operating_cash_flow) - only the latter get an
 # auto-computed quarterly default below.

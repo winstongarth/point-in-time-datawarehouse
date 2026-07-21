@@ -19,9 +19,8 @@ def retry_with_backoff(
 ) -> T:
     """Call `fn`, retrying on `retry_on` exceptions with exponential backoff.
 
-    Every vendor this project depends on is unofficial, free-tier, or both
-    (CLAUDE.md 4.2-4.3); transient failures are the expected case, not the
-    exception.
+    Every vendor this project depends on is unofficial, free-tier, or both;
+    transient failures are the expected case, not the exception.
     """
     attempt = 0
     while True:

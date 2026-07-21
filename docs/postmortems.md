@@ -1,9 +1,8 @@
 # Post-mortems
 
-Three real failures encountered during this build (CLAUDE.md 8, M8). Each was found
-by running the real pipeline against the live 50-ticker universe, not by a unit test —
-see [docs/limitations.md](docs/limitations.md) and the milestone notes in
-[CLAUDE.md](../CLAUDE.md) for the surrounding context.
+Three real failures encountered during this build. Each was found by running the real
+pipeline against the live 50-ticker universe, not by a unit test — see
+[docs/limitations.md](limitations.md) for related context.
 
 ---
 
@@ -36,13 +35,12 @@ what the *real M3 pipeline* actually did.
 regardless (there is no true historical assignment date to recover), so treating it as
 "always true absent better information" is the more useful reading of that same limitation.
 A genuine *reassignment*, once one is ever detected, still opens at real detection time.
-See `src/pdw/parse.py`'s `_upsert_entities_and_tickers`, CLAUDE.md 5's M5 amendment.
+See `src/pdw/parse.py`'s `_upsert_entities_and_tickers`.
 
 **Follow-up:** none needed beyond the fix itself — re-verified live against GE's real,
-multiply-restated FY2011 revenue after the change (see CLAUDE.md 8's M5 note). Logged in
-[[feedback_verify_full_universe]] as the clearest example yet of why a live demo against
-real historical data, not just synthetic fixtures, is required before signing off a
-point-in-time-sensitive milestone.
+multiply-restated FY2011 revenue after the change. The clearest example yet of why a live
+demo against real historical data, not just synthetic fixtures, is required before
+signing off a point-in-time-sensitive milestone.
 
 ---
 
@@ -58,7 +56,7 @@ out-of-order arrival, no-change re-fetch) passed. The failure only appeared on t
 real load against Verizon's actual EDGAR filing history.
 
 **Root cause:** invariant 1's key was originally `(entity_id, metric_code, period_end,
-source)`, per CLAUDE.md's spec as first written. A real Verizon 10-Q (accession
+source)`, per the spec as first written. A real Verizon 10-Q (accession
 `0000732712-19-000052`) reports revenue for *both* the 3-month quarter and the 6-month
 year-to-date window ending on the same `period_end`, under the same accession — two
 genuinely different, simultaneously-true facts, not one restating the other. Keying on
@@ -75,8 +73,7 @@ disclose cumulative figures.
 `period_start` is `NULL` for instant concepts (`Assets`, `StockholdersEquity`), so the
 `EXCLUDE` constraint coalesces it to a fixed sentinel date rather than comparing raw `NULL`s
 (which Postgres treats as never equal to each other, silently defeating the constraint for
-exactly the rows most likely to collide). See `migrations/sql/0004_core_facts.sql`,
-CLAUDE.md 5's M4 amendment.
+exactly the rows most likely to collide). See `migrations/sql/0004_core_facts.sql`.
 
 **Follow-up:** this same EDGAR shape (a duration fact sharing its `fiscal_period` label with
 a differently-scoped fact for the same company) resurfaced twice more at M6 (`revenue_sanity`
@@ -97,8 +94,8 @@ demo are both fundamentals-only.
 
 **Detection:** `pdw dq run`'s `price_close_cross_vendor` and `price_staleness` checks did
 not error — they vacuously passed with `"no comparable rows yet"` and `"no price facts
-loaded yet"` respectively (correct behavior for a genuinely-empty table, per CLAUDE.md 7:
-"a check that only records failures cannot support a coverage metric"). Nothing in the
+loaded yet"` respectively (correct behavior for a genuinely-empty table — a check that only
+records failures cannot support a coverage metric). Nothing in the
 check output distinguished "this feed is healthy and current" from "this feed has never
 actually been run for the full universe." Only a direct `SELECT count(distinct entity_id)
 FROM core.price_fact` — run because the *volume* of check results looked implausibly small

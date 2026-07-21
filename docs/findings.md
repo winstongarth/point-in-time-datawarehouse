@@ -1,8 +1,8 @@
 # Findings: point-in-time vs. latest-restated backtest
 
-Naive quarterly-rebalanced earnings-yield long/short over the 50-name universe (CLAUDE.md 8, M7), run twice through the same `PointInTimeReader`-backed pipeline: once with `as_of` fixed to each historical rebalance date, once with `.latest()` for every rebalance. Earnings yield = trailing-twelve-month net income / market cap (diluted weighted-average shares x price, nearest trading day at/after the rebalance date). Long the top 10 names, short the bottom 10, equal-weighted, held one quarter.
+Naive quarterly-rebalanced earnings-yield long/short over the 50-name universe, run twice through the same `PointInTimeReader`-backed pipeline: once with `as_of` fixed to each historical rebalance date, once with `.latest()` for every rebalance. Earnings yield = trailing-twelve-month net income / market cap (diluted weighted-average shares x price, nearest trading day at/after the rebalance date). Long the top 10 names, short the bottom 10, equal-weighted, held one quarter.
 
-**Methodology note on price fields:** market cap uses Tiingo's raw `close` (matches the true historical share count basis); forward returns use yfinance `adj_close` (the correct field for a total-return series). yfinance's own `close` is always split-adjusted by Yahoo's backend regardless of fetch flags (CLAUDE.md 7's M6 amendment) and would silently understate market cap for any ticker that later split within the window.
+**Methodology note on price fields:** market cap uses Tiingo's raw `close` (matches the true historical share count basis); forward returns use yfinance `adj_close` (the correct field for a total-return series). yfinance's own `close` is always split-adjusted by Yahoo's backend regardless of fetch flags and would silently understate market cap for any ticker that later split within the window.
 
 ## Comparison
 

@@ -8,10 +8,10 @@ import psycopg
 
 from pdw.query import PointInTimeReader
 
-# CLAUDE.md 7 / M7: "naive quarterly-rebalanced earnings-yield long/short
-# over the 50-name universe." Earnings yield = trailing-twelve-month net
+# Naive quarterly-rebalanced earnings-yield long/short over the 50-name
+# universe. Earnings yield = trailing-twelve-month net
 # income / market cap (the reciprocal of trailing P/E) - a standard, simple
-# value factor. Deliberately crude throughout (CLAUDE.md 0): this backtest
+# value factor. Deliberately crude throughout: this backtest
 # exists only to measure the point-in-time-vs-restated performance gap, not
 # to be a good trading strategy.
 QUANTILE_SIZE = 10  # top/bottom 10 of 50 -> long/short deciles-of-the-universe
@@ -27,12 +27,12 @@ _SINGLE_QUARTER_MAX_DAYS = 100
 
 # Market cap needs a price on the *same basis* as the reported share count:
 # yfinance's Close/Adj Close are always split-adjusted to today's share
-# count by Yahoo's own backend (CLAUDE.md 7's M6 amendment) - multiplying
+# count by Yahoo's own backend - multiplying
 # that by a historical quarter's actual (pre-split) share count would
 # silently understate market cap for any ticker that later split within the
 # window. Tiingo's raw close doesn't have this problem, so it's used for
 # market cap specifically. Returns still use yfinance adj_close, the correct
-# field for a total-return series (CLAUDE.md 4.2).
+# field for a total-return series.
 MARKET_CAP_PRICE_SOURCE = "tiingo"
 RETURN_PRICE_SOURCE = "yfinance"
 
@@ -201,15 +201,15 @@ def compute_earnings_yields(
     `rebalance_date`. Tickers missing any input (TTM net income, shares
     outstanding, or a nearby price) are simply excluded - a documented
     simplification, not an error, consistent with this being a deliberately
-    crude instrument (CLAUDE.md 0).
+    crude instrument.
 
     Two separate `as_of`s, not one: `fundamentals_as_of` is the actual axis
     this milestone measures (rebalance date for point-in-time, now for
     latest) and must stay exact. `price_as_of` is always "now" regardless
-    of mode - prices aren't restated in the amended-filing sense M7 is
-    about, and using the rebalance date here instead would make every
-    price permanently unknowable: a source's own availability lag (CLAUDE.md
-    1) means a trade_date's close only becomes knowable *after* that date,
+    of mode - prices aren't restated in the amended-filing sense this
+    backtest is about, and using the rebalance date here instead would make
+    every price permanently unknowable: a source's own availability lag
+    means a trade_date's close only becomes knowable *after* that date,
     so a same-day as_of can never see any price for or after that date -
     found live, when a full run produced zero rebalances at all.
     """
@@ -281,8 +281,8 @@ def run_backtest(
     mode: str,
 ) -> BacktestRun:
     """Run the full quarterly-rebalanced long/short once, entirely through
-    `PointInTimeReader` (CLAUDE.md 6: "the only sanctioned way to read
-    core"). mode="point_in_time" uses each rebalance's own historical date
+    `PointInTimeReader` (the only sanctioned way to read
+    core). mode="point_in_time" uses each rebalance's own historical date
     as the *fundamentals* `as_of`, so restated facts filed later are
     correctly invisible. mode="latest" uses today's fundamentals for every
     rebalance instead, so every fact reflects its final, fully-restated
@@ -442,10 +442,9 @@ _SVG_MARGIN = 48
 def render_equity_curve_svg(
     pit_curve: list[tuple[date, float]], latest_curve: list[tuple[date, float]]
 ) -> str:
-    """Hand-written SVG, no charting dependency (CLAUDE.md 3: "do not add a
-    dependency without asking") - a plain two-line chart is well within
-    what's reasonable to write by hand, same spirit as this project's
-    hand-written SQL."""
+    """Hand-written SVG, no charting dependency added - a plain two-line
+    chart is well within what's reasonable to write by hand, same spirit as
+    this project's hand-written SQL."""
     all_points = pit_curve + latest_curve
     if not all_points:
         return "<svg></svg>"
@@ -502,8 +501,8 @@ def render_findings_report(
     lines = [
         "# Findings: point-in-time vs. latest-restated backtest",
         "",
-        "Naive quarterly-rebalanced earnings-yield long/short over the 50-name universe "
-        "(CLAUDE.md 8, M7), run twice through the same `PointInTimeReader`-backed pipeline: "
+        "Naive quarterly-rebalanced earnings-yield long/short over the 50-name universe, "
+        "run twice through the same `PointInTimeReader`-backed pipeline: "
         "once with `as_of` fixed to each historical rebalance date, once with `.latest()` for "
         "every rebalance. Earnings yield = trailing-twelve-month net income / market cap "
         "(diluted weighted-average shares x price, nearest trading day at/after the rebalance "
@@ -512,8 +511,8 @@ def render_findings_report(
         "**Methodology note on price fields:** market cap uses Tiingo's raw `close` (matches "
         "the true historical share count basis); forward returns use yfinance `adj_close` "
         "(the correct field for a total-return series). yfinance's own `close` is always "
-        "split-adjusted by Yahoo's backend regardless of fetch flags (CLAUDE.md 7's M6 "
-        "amendment) and would silently understate market cap for any ticker that later split "
+        "split-adjusted by Yahoo's backend regardless of fetch flags "
+        "and would silently understate market cap for any ticker that later split "
         "within the window.",
         "",
         "## Comparison",
@@ -569,8 +568,8 @@ def find_case_studies(
 ) -> list[CaseStudy]:
     """For each differing position, trace it back to the specific
     net_income fact(s) that changed between the point-in-time and latest
-    views - CLAUDE.md 8's M7 accept criteria requires each case study
-    linked to a specific fact_id and accession number."""
+    views - each case study is linked to a specific fact_id and accession
+    number."""
     pit_by_date = {p.rebalance_date: p for p in pit_run.portfolios}
     latest_by_date = {p.rebalance_date: p for p in latest_run.portfolios}
     case_studies: list[CaseStudy] = []

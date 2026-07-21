@@ -27,7 +27,7 @@ class PipelineRunHandle:
     """Mutable counters an ingestion/parse/load step fills in as it runs.
 
     `run_id` is what every raw.payload / dq.check_result row traces back to
-    (CLAUDE.md's ops.pipeline_run), so it's available as soon as the run
+    (ops.pipeline_run), so it's available as soon as the run
     starts rather than only once it finishes.
     """
 

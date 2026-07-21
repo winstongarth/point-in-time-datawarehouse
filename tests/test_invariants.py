@@ -1,4 +1,4 @@
-"""CLAUDE.md 5's six non-negotiable invariants, tested against the live
+"""The six non-negotiable bitemporal invariants, tested against the live
 database - not just asserted in application code.
 
 1. No knowledge-time overlap (the EXCLUDE constraint).

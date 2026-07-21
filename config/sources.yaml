@@ -1,6 +1,6 @@
-# Per-source availability lag (CLAUDE.md 1: "knowledge_from is not the
-# filing timestamp... configurable, default: next trading day open... do
-# not hardcode this"). Expressed as whole calendar days added to the
+# Per-source availability lag - knowledge_from is not the filing timestamp,
+# it's configurable per source (default: next trading day open), never
+# hardcoded. Expressed as whole calendar days added to the
 # filing/trade date before rolling forward to the next weekday and
 # attaching an approximate market-open time - see pdw.availability for the
 # exact computation and its documented simplifications (no holiday

@@ -1,6 +1,6 @@
 # `stg.edgar_fundamental_fact`
 
-Parsed EDGAR XBRL datapoints with the metric map already applied. Truncated and rebuilt on every `pdw parse` run; not deduplicated and has no constraints beyond column types by design (CLAUDE.md 5).
+Parsed EDGAR XBRL datapoints with the metric map already applied. Truncated and rebuilt on every `pdw parse` run; not deduplicated and has no constraints beyond column types, by design.
 
 | Field | Type | Nullable | Notes |
 |---|---|---|---|

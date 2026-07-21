@@ -1,5 +1,5 @@
 -- Five schemas with a strict one-way data flow: raw -> stg -> core, observed by
--- dq and ops. See CLAUDE.md section 5 for what each schema is responsible for.
+-- dq and ops.
 CREATE SCHEMA IF NOT EXISTS raw;
 CREATE SCHEMA IF NOT EXISTS stg;
 CREATE SCHEMA IF NOT EXISTS core;

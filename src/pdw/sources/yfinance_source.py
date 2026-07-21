@@ -8,12 +8,12 @@ import yfinance as yf
 from pdw.retry import retry_with_backoff
 from pdw.sources import FetchResult, normalize_ticker_for_vendor
 
-# CLAUDE.md 2: "History: 10 years or vendor availability, whichever is shorter."
+# History: 10 years or vendor availability, whichever is shorter.
 DEFAULT_PERIOD = "10y"
 
 
 class YFinanceSource:
-    """yfinance daily price adapter (CLAUDE.md 4.2). Prices, primary source.
+    """yfinance daily price adapter. Prices, primary source.
 
     yfinance is not a raw HTTP client — it returns a parsed DataFrame, so
     there is no vendor wire format to store verbatim. The DataFrame's CSV
@@ -22,7 +22,7 @@ class YFinanceSource:
 
     `auto_adjust=False` is deliberate: the divergence between `Close` and
     `Adj Close` across fetch dates is the mechanism this project uses to
-    demonstrate retroactive price adjustment (CLAUDE.md 1). The library's
+    demonstrate retroactive price adjustment. The library's
     own default, `auto_adjust=True`, would collapse that distinction by
     baking the adjustment into `Close` and dropping `Adj Close` entirely.
     """
@@ -62,7 +62,7 @@ class YFinanceSource:
                 body=history.to_csv().encode("utf-8"),
             )
 
-        # yfinance is unofficial (CLAUDE.md 4.2) and surfaces failures as a mix
+        # yfinance is unofficial and surfaces failures as a mix
         # of requests/JSON/library exceptions rather than one clean type, so
         # the retry is intentionally broad.
         return retry_with_backoff(_do, retry_on=(Exception,))

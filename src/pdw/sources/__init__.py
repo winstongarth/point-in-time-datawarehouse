@@ -25,10 +25,10 @@ class FetchResult:
 class Source(Protocol):
     """Shared interface for every vendor adapter.
 
-    CLAUDE.md section 2: "Not a general ingestion framework. Three concrete
-    adapters, one shared interface." This is that interface — the ingestion
-    orchestrator (pdw.ingest) only ever talks to `name` and `fetch_universe`,
-    never to EDGAR/yfinance/Tiingo specifics directly.
+    Not a general ingestion framework - three concrete adapters, one shared
+    interface. The ingestion orchestrator (pdw.ingest) only ever talks to
+    `name` and `fetch_universe`, never to EDGAR/yfinance/Tiingo specifics
+    directly.
     """
 
     name: str

@@ -1,7 +1,7 @@
 -- core.fundamental_fact: the bitemporal promotion target for
 -- stg.edgar_fundamental_fact. Every restatement closes the prior row's
 -- knowledge_to and opens a successor with supersedes set; rows are never
--- deleted or overwritten (CLAUDE.md 1).
+-- deleted or overwritten.
 CREATE TABLE core.fundamental_fact (
     fact_id           bigserial   PRIMARY KEY,
     entity_id         int         NOT NULL REFERENCES core.entity (entity_id),
@@ -27,8 +27,8 @@ CREATE TABLE core.fundamental_fact (
     CONSTRAINT fundamental_fact_knowledge_order_check
         CHECK (knowledge_from < knowledge_to),
 
-    -- Invariant 3 (CLAUDE.md 5): knowledge_from >= filed_date + availability_lag.
-    -- The exact per-source lag (CLAUDE.md 1: configurable, not hardcoded -
+    -- Invariant 3: knowledge_from >= filed_date + availability_lag.
+    -- The exact per-source lag (configurable, not hardcoded -
     -- see config/sources.yaml and pdw.availability) is an application-level
     -- concern computed at load time and covered by pytest, not something a
     -- static CHECK constraint can encode (it would need to know which
@@ -50,7 +50,7 @@ CREATE TABLE core.fundamental_fact (
 -- "3 months ended June 30" and "6 months ended June 30" revenue figures
 -- share period_end but are different, simultaneously-true facts, not one
 -- restating the other (verified live: a Verizon 10-Q, accession
--- 0000732712-19-000052 - see CLAUDE.md 5's amendment note). period_start is
+-- 0000732712-19-000052). period_start is
 -- NULL for instant concepts (Assets, StockholdersEquity); coalesced to a
 -- fixed sentinel here because Postgres's "=" never matches NULL to NULL,
 -- which would otherwise silently let two genuinely colliding instant-concept
@@ -71,8 +71,8 @@ ALTER TABLE core.fundamental_fact
 CREATE INDEX fundamental_fact_entity_metric_idx
     ON core.fundamental_fact (entity_id, metric_code, period_start, period_end);
 
--- core.price_fact: same bitemporal treatment for daily prices. The spec's
--- illustrative DDL (CLAUDE.md 5) doesn't list a surrogate key column, but
+-- core.price_fact: same bitemporal treatment for daily prices. Adds a
+-- surrogate key column beyond what an illustrative DDL might show, since
 -- every other core table has one and the loader needs a stable id to set
 -- as a later row's reference point when reconciling, so fact_id is added
 -- here on the same pattern as fundamental_fact.
@@ -94,7 +94,7 @@ CREATE TABLE core.price_fact (
     CONSTRAINT price_fact_knowledge_order_check
         CHECK (knowledge_from < knowledge_to),
 
-    -- price_fact has no filed_date (CLAUDE.md 5); trade_date is the
+    -- price_fact has no filed_date; trade_date is the
     -- analogous basis a price's knowledge can never precede.
     CONSTRAINT price_fact_lag_check
         CHECK (knowledge_from >= trade_date::timestamptz)

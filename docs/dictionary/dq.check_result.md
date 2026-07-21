@@ -1,6 +1,6 @@
 # `dq.check_result`
 
-One row per check per run, including passes - a check that only records failures cannot support a coverage metric (CLAUDE.md 7).
+One row per check per run, including passes - a check that only records failures cannot support a coverage metric.
 
 | Field | Type | Nullable | Notes |
 |---|---|---|---|

@@ -1,10 +1,6 @@
 # Architecture
 
-Schema flow, the bitemporal model, and a sequence diagram of a real restatement
-(CLAUDE.md 10 — this file was named as landing at M4 in README.md's docs table but was
-never actually written until M8's documentation pass caught the gap; see
-[docs/postmortems.md](postmortems.md) for the pattern of stale/missing docs this
-project has repeatedly found by re-checking its own claims against reality).
+Schema flow, the bitemporal model, and a sequence diagram of a real restatement.
 
 ## Schema flow
 
@@ -61,7 +57,7 @@ Rows in `core` are never deleted or overwritten; both the original and the resta
 stay queryable forever, each correct for a different question ("what did we believe on
 date X?" vs. "what's true today?").
 
-### The six invariants (CLAUDE.md 5)
+### The six invariants
 
 1. **No knowledge-time overlap** — for any `(entity_id, metric_code, period_start,
    period_end, source)`, the `[knowledge_from, knowledge_to)` ranges never overlap.
@@ -80,7 +76,7 @@ restatement of each other. See [docs/postmortems.md](postmortems.md)'s second po
 ## Sequence diagram: a real restatement
 
 GE's FY2011 revenue (CIK `0000040545`), traced through six actually-filed versions — this
-is the live scenario M5's accept criteria was verified against (CLAUDE.md 8's M5 note).
+is the live scenario the point-in-time reader was verified against.
 
 ```mermaid
 sequenceDiagram

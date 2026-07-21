@@ -1,13 +1,13 @@
-# Cross-vendor reconciliation rules (CLAUDE.md 7). Declared here, not in
+# Cross-vendor reconciliation rules. Declared here, not in
 # code, so a new comparison can be added without touching pdw.dq_checks.
 #
-# "right: tiingo" - the spec originally named Stooq here; amended at M2 when
-# Stooq turned out to sit behind a JS bot challenge (see CLAUDE.md 4.3 and
+# "right: tiingo" - the original secondary source was Stooq; swapped when
+# Stooq turned out to sit behind a JS bot challenge (see
 # docs/limitations.md). Tiingo requires a real API token
 # (PDW_TIINGO_API_TOKEN) that may not be configured on every machine running
 # this check; with no comparable tiingo price_fact rows, the check still
-# writes one passing result noting zero comparisons (CLAUDE.md 7: "a check
-# that only records failures cannot support a coverage metric").
+# writes one passing result noting zero comparisons (a check
+# that only records failures cannot support a coverage metric).
 #
 # field: adj_close, not close - amended at M6 against live data. yfinance's
 # Close is always split-adjusted by Yahoo's own backend regardless of the

@@ -64,7 +64,8 @@ def parse_companyfacts(
     has *any* datapoint for that exact period wins; a lower-priority tag
     only fills in periods no higher-priority tag reports. vendor_native_tag
     is recorded per fact, so which tag won for which period stays visible
-    (CLAUDE.md 4.1: "must be visible in the data, not smoothed over").
+    (a filer switching tags mid-history must be visible in the data, not
+    smoothed over).
     """
     data = json.loads(body)
     cik = str(data["cik"]).zfill(10)
@@ -206,7 +207,7 @@ def run_parse(
         # present even when an entity has zero parseable metric facts (e.g.
         # a freshly reorganized holding-company CIK with a filing but no
         # XBRL financials yet - verified live for XOM, 2026-07-20). Entity/
-        # ticker mapping is a CLAUDE.md M3 deliverable in its own right, not
+        # ticker mapping is a deliverable in its own right, not
         # conditional on fundamentals existing.
         entity_names_by_cik[cik] = _extract_entity_name(body)
 
@@ -260,14 +261,14 @@ def _upsert_entities_and_tickers(
     knowledge_from: datetime,
 ) -> None:
     """Insert new entities, refresh their name, and open/close ticker
-    mappings as needed (CLAUDE.md 5: entity_ticker is bitemporal).
+    mappings as needed (entity_ticker is bitemporal).
 
     `knowledge_from` (the ticker map's fetch time) is used only when a
     *reassignment* is actually detected - that moment is genuinely when we
     learned about the change, and can't honestly be backdated. A brand-new
-    entity's *first* ticker mapping instead opens at `_SENTINEL_KNOWLEDGE_FROM`
-    (CLAUDE.md 5 M5 amendment): SEC's map is current-state-only
-    (docs/limitations.md), so there is no true historical assignment date to
+    entity's *first* ticker mapping instead opens at `_SENTINEL_KNOWLEDGE_FROM`:
+    SEC's map is current-state-only (docs/limitations.md), so there is no
+    true historical assignment date to
     recover, but gating every point-in-time read on "when we happened to
     first fetch the map" would make PointInTimeReader return nothing at all
     for any as_of before this project's own first ingestion run - which would

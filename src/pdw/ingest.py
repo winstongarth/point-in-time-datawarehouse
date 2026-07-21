@@ -46,7 +46,7 @@ def load_universe(path: Path) -> list[str]:
 def ingest(conn: psycopg.Connection, source: Source, tickers: list[str]) -> None:
     """Fetch every vendor response for `tickers` via `source` and land it in raw.payload.
 
-    Runs inside one ops.pipeline_run row (CLAUDE.md's ops.pipeline_run) so the
+    Runs inside one ops.pipeline_run row so the
     whole ingest is traceable to a single run_id, win or lose.
     """
     with pipeline_run(conn, pipeline=f"ingest:{source.name}") as run:
@@ -73,8 +73,7 @@ def _hash_already_seen(conn: psycopg.Connection, source: str, content_sha256: st
     """Whether this exact body has already landed for this source in a prior fetch.
 
     Purely observational (logged, not acted on) — raw.payload always records
-    every fetch regardless, per CLAUDE.md 5: "proof of no-change is itself
-    information."
+    every fetch regardless: proof of no-change is itself information.
     """
     with conn.cursor() as cur:
         cur.execute(

@@ -31,7 +31,7 @@ class DqRunSummary:
 
 
 def run_all_checks(conn: psycopg.Connection, reconciliation_config: Path) -> DqRunSummary:
-    """Run all 8 required checks (CLAUDE.md 7) and update the dq.exception
+    """Run all 8 required checks and update the dq.exception
     lifecycle for each. Every check's every result is written to
     dq.check_result, including passes."""
     rules = load_reconciliation_rules(reconciliation_config)

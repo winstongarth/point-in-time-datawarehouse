@@ -14,8 +14,8 @@ CREATE TABLE raw.payload (
 );
 
 -- Every fetch is recorded even when content is unchanged (a repeated hash is
--- itself information — see CLAUDE.md 5), so this index is what lets the
--- parsing stage (M3) cheaply recognize "we've already seen this exact body"
+-- itself information), so this index is what lets the
+-- parsing stage cheaply recognize "we've already seen this exact body"
 -- without re-reading the bytea payload.
 CREATE INDEX raw_payload_source_hash_idx ON raw.payload (source, content_sha256);
 

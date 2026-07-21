@@ -6,13 +6,13 @@ import psycopg
 
 _SCHEMAS = ("raw", "stg", "core", "dq", "ops")
 
-# Hand-curated: "source, transformation applied, known caveats" (CLAUDE.md
-# 10) needs domain knowledge information_schema can't provide. Deliberately
+# Hand-curated: "source, transformation applied, known caveats" needs
+# domain knowledge information_schema can't provide. Deliberately
 # terse - only non-obvious columns get a note; everything else is fully
 # described by its type/nullability alone. No wall-clock content anywhere
 # in this module's output, so re-running against an unchanged schema
-# produces byte-identical files (CLAUDE.md 6's M6 accept criteria:
-# "regenerates deterministically").
+# produces byte-identical files (the accept criterion: "regenerates
+# deterministically").
 
 _TABLE_NOTES: dict[str, str] = {
     "raw.payload": (
@@ -23,16 +23,15 @@ _TABLE_NOTES: dict[str, str] = {
     "stg.edgar_fundamental_fact": (
         "Parsed EDGAR XBRL datapoints with the metric map already applied. "
         "Truncated and rebuilt on every `pdw parse` run; not deduplicated "
-        "and has no constraints beyond column types by design (CLAUDE.md 5)."
+        "and has no constraints beyond column types, by design."
     ),
     "core.entity": "One row per company (by CIK), independent of ticker history.",
     "core.entity_ticker": (
         "Bitemporal ticker->entity mapping. A brand-new entity's first "
         "mapping is backdated to a fixed sentinel (2000-01-01 UTC), not the "
         "ingestion date - SEC's ticker map is current-state-only, so there "
-        "is no true historical assignment date to recover regardless "
-        "(CLAUDE.md 5's M5 amendment). A genuine reassignment, once "
-        "detected, opens at real detection time."
+        "is no true historical assignment date to recover regardless. "
+        "A genuine reassignment, once detected, opens at real detection time."
     ),
     "core.fundamental_fact": (
         "The bitemporal core for the 6 tracked fundamental metrics. A "
@@ -42,12 +41,12 @@ _TABLE_NOTES: dict[str, str] = {
     "core.price_fact": (
         "The bitemporal core for daily prices. Multiple `source`s "
         "(yfinance, tiingo) may hold independent, simultaneously-valid "
-        "rows for the same entity/date - CLAUDE.md's M6 cross-vendor check "
-        "reconciles them, this table doesn't merge them itself."
+        "rows for the same entity/date - the cross-vendor reconciliation "
+        "check reconciles them, this table doesn't merge them itself."
     ),
     "dq.check_result": (
         "One row per check per run, including passes - a check that only "
-        "records failures cannot support a coverage metric (CLAUDE.md 7)."
+        "records failures cannot support a coverage metric."
     ),
     "dq.exception": (
         "The triage lifecycle (open -> triage -> closed) for a recurring "

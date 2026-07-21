@@ -1,6 +1,6 @@
 # `core.price_fact`
 
-The bitemporal core for daily prices. Multiple `source`s (yfinance, tiingo) may hold independent, simultaneously-valid rows for the same entity/date - CLAUDE.md's M6 cross-vendor check reconciles them, this table doesn't merge them itself.
+The bitemporal core for daily prices. Multiple `source`s (yfinance, tiingo) may hold independent, simultaneously-valid rows for the same entity/date - the cross-vendor reconciliation check reconciles them, this table doesn't merge them itself.
 
 | Field | Type | Nullable | Notes |
 |---|---|---|---|

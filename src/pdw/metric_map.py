@@ -10,7 +10,7 @@ import yaml
 class MetricMapping:
     """Priority-ordered XBRL tags for one canonical metric, and the unit they must be in.
 
-    CLAUDE.md 4.1: "the first tag ... that has data ... wins", and the unit
+    The first tag in priority order that has data wins, and the unit
     matters because the same tag can appear in multiple units (e.g. a
     duration concept reported per-share) that must not be confused with each
     other.

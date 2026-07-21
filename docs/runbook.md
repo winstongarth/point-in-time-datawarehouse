@@ -1,13 +1,13 @@
 # Runbook
 
-Triage procedure for each `BREAK`-severity check (CLAUDE.md 8, M8), the exception
-lifecycle's escalation path, and the common failure modes actually seen while building
-this project (cross-referenced to [docs/postmortems.md](postmortems.md)).
+Triage procedure for each `BREAK`-severity check, the exception lifecycle's escalation
+path, and the common failure modes actually seen while building this project
+(cross-referenced to [docs/postmortems.md](postmortems.md)).
 
 ## Escalation path
 
-Every `dq` check writes a `dq.check_result` row on every `pdw dq run`, pass or fail
-(CLAUDE.md 7). A failure opens a `dq.exception` row if none is already open or in
+Every `dq` check writes a `dq.check_result` row on every `pdw dq run`, pass or fail.
+A failure opens a `dq.exception` row if none is already open or in
 triage for that `(check_name, dimension_key)`; a recurring failure is a no-op (it's
 still open); the check passing again auto-closes it.
 
@@ -22,9 +22,8 @@ still open); the check passing again auto-closes it.
      judgment without re-doing the investigation.
 
 `INFO` and `WARN` exceptions can sit open indefinitely without blocking anything; treat
-them as a backlog to periodically sweep. `BREAK` means "not fit for use" (CLAUDE.md 5) —
-treat every open `BREAK` exception as blocking promotion of the affected data until
-triaged.
+them as a backlog to periodically sweep. `BREAK` means "not fit for use" — treat every
+open `BREAK` exception as blocking promotion of the affected data until triaged.
 
 ## `balance_sheet_identity` (BREAK)
 
@@ -61,7 +60,8 @@ noise.
    mode (a feed that silently never ran at all, vs. one that stopped).
 2. If only specific tickers are stale while the feed overall is healthy: check whether the
    ticker was delisted, acquired, or renamed — SEC's ticker map is current-state-only
-   (CLAUDE.md/docs/limitations.md), so a corporate action can silently orphan a ticker.
+   (see [docs/limitations.md](limitations.md)), so a corporate action can silently orphan
+   a ticker.
 3. Re-run `pdw ingest --source yfinance` for the affected ticker(s) and `pdw load-prices
    --source yfinance`; confirm the exception auto-closes on the next `pdw dq run`.
 
@@ -69,10 +69,10 @@ noise.
 
 **What it means:** yfinance and Tiingo's `adj_close` disagree by more than 1.5% relative,
 for 3+ consecutive trading days for the same ticker. The tolerance was set from live data
-(max observed legitimate disagreement: 1.377%, see CLAUDE.md 7's M6 amendment) — anything
-that reaches `BREAK` here is outside the band two independently-computed adjustment
-methodologies should ever produce, which means one vendor's feed is actually wrong for that
-stretch, not just differently-rounded.
+(max observed legitimate disagreement: 1.377%) — anything that reaches `BREAK` here is
+outside the band two independently-computed adjustment methodologies should ever produce,
+which means one vendor's feed is actually wrong for that stretch, not just
+differently-rounded.
 
 **Triage steps:**
 1. Pull `observed.relative_diff` across the consecutive failing days — a value far outside
@@ -82,7 +82,7 @@ stretch, not just differently-rounded.
    introduced, large, sudden divergence right after a corporate action is the signature of
    one vendor's adjustment factor being wrong or late (this project already found live that
    yfinance's raw `close`, not `adj_close`, is *always* split-adjusted regardless of fetch
-   flags — CLAUDE.md 7's M6 amendment — so double-check which field actually diverged).
+   flags — so double-check which field actually diverged).
 3. If one vendor is confirmed wrong: that vendor's data for the affected dates should not be
    trusted for anything relying on it (the M7 backtest uses Tiingo for market cap and
    yfinance for returns specifically to have an independent check on each) — re-fetch and

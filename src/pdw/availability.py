@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-# Approximates "next trading day open" (CLAUDE.md 1) without a full NYSE
+# Approximates "next trading day open" without a full NYSE
 # holiday calendar: weekends are skipped, US market holidays are not - a
 # documented simplification (see docs/limitations.md). Market open is
 # approximated as 13:30 UTC (9:30am US Eastern) year-round, ignoring the

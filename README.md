@@ -143,8 +143,7 @@ uniformly, with an in-code assertion that it never returns a row whose
 `filed_date` is after `as_of` — belt-and-braces alongside the DB constraint.
 Direct `SELECT` against `core` from analysis code is considered a bug.
 
-Full schema DDL and rationale: [docs/architecture.md](docs/architecture.md)
-(from M4 onward) and [CLAUDE.md](CLAUDE.md#5-schema).
+Full schema DDL and rationale: [docs/architecture.md](docs/architecture.md).
 
 ## Tech stack
 
@@ -192,9 +191,7 @@ start until then.
 | M5 | Point-in-time reader — `PointInTimeReader` + `pdw query --as-of` | `as_of` before/after a known restatement returns original/restated value; property test: no row ever has `filed_date > as_of` | ✅ Done |
 | M6 | Quality and reconciliation — all 8 checks, exception lifecycle, auto-generated data dictionary | `pdw dq run` emits results for every check; seeded corruptions detected at correct severity; dictionary regenerates deterministically | ✅ Done |
 | M7 | The experiment — earnings-yield long/short, point-in-time vs. latest | `docs/findings.md` has the comparison table, equity-curve chart, and ≥3 traced case studies linked to `fact_id`/accession number | ✅ Done |
-| M8 | Operations layer — SLA/freshness monitoring, dependency DAG, post-mortems | `pdw ops status` shows per-feed freshness; `docs/runbook.md` gives triage steps per `BREAK` check | ⬜ Planned |
-
-Full milestone detail: [CLAUDE.md](CLAUDE.md#8-milestones).
+| M8 | Operations layer — SLA/freshness monitoring, dependency DAG, post-mortems | `pdw ops status` shows per-feed freshness; `docs/runbook.md` gives triage steps per `BREAK` check | ✅ Done |
 
 ## Quickstart
 
@@ -242,7 +239,6 @@ migrations/     Alembic env.py + hand-written SQL-only revisions (migrations/sql
 tests/          pytest; fixtures under tests/fixtures/ (from M2 onward)
 config/         universe, metric mapping, reconciliation rules (from M2 onward)
 docs/           architecture, data dictionary, findings, runbook, limitations
-CLAUDE.md       full project spec: schema, invariants, milestones, conventions
 ```
 
 ## Testing

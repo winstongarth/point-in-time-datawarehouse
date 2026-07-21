@@ -156,7 +156,7 @@ def test_quarterly_and_ytd_figures_sharing_a_period_end_are_independent_facts(
     3-month quarter and the 6-month year-to-date window ending on the same
     period_end, under the same accession. These are two different,
     simultaneously-true facts, not one restating the other - period_start
-    must be part of the key (CLAUDE.md 5's M4 amendment), or the loader
+    must be part of the key, or the loader
     collides them into one and violates knowledge_from < knowledge_to.
     """
     cik = "1111111106"

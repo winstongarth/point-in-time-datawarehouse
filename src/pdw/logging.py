@@ -37,7 +37,7 @@ class JSONFormatter(logging.Formatter):
     """Renders each log record as one JSON object per line.
 
     Every core fact must be traceable to the pipeline run that produced it
-    (CLAUDE.md's ops.pipeline_run); structured, greppable logs are what make that
+    (ops.pipeline_run); structured, greppable logs are what make that
     traceable in practice, so extra fields passed via `logger.info(..., extra={...})`
     are preserved rather than dropped.
     """

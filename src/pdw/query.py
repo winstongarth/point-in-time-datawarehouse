@@ -47,7 +47,7 @@ _PRICES_SCHEMA = pl.Schema(_PRICES_SCHEMA_DEF)
 
 
 class PointInTimeReader:
-    """The only sanctioned way to read `core` (CLAUDE.md 6). Every query is
+    """The only sanctioned way to read `core`. Every query is
     filtered to what was knowable as of a single instant - never "now"
     unless you explicitly ask for that via `.latest()`.
     """
@@ -83,7 +83,7 @@ class PointInTimeReader:
 
         rows = self._fetch(query, params)
 
-        # Belt-and-braces (CLAUDE.md 6): the DB's own fundamental_fact_lag_check
+        # Belt-and-braces: the DB's own fundamental_fact_lag_check
         # already makes this impossible, but a reader bug (e.g. a stray `OR`)
         # must never silently leak knowledge from the future.
         for row in rows:
@@ -100,15 +100,15 @@ class PointInTimeReader:
     ) -> pl.DataFrame:
         """`source=None` (the default) returns every vendor's row for a
         trade_date - multiple sources can hold independent, simultaneously-
-        valid rows for the same entity/date (CLAUDE.md 5's `core.price_fact`
-        note), which is exactly what the cross-vendor reconciliation check
-        needs. Any caller that wants exactly one price per ticker per day
-        (e.g. computing a return series) must pass `source` explicitly -
-        CLAUDE.md 4.2/4.3 designate yfinance primary and Tiingo secondary/
-        reconciliation-only, so `source="yfinance"` is the right default for
-        analysis code. Found live at M7: querying two tickers' prices after
-        M6 loaded Tiingo alongside yfinance returned 2 rows per trade_date
-        with no way to tell them apart without this parameter.
+        valid rows for the same entity/date, which is exactly what the
+        cross-vendor reconciliation check needs. Any caller that wants
+        exactly one price per ticker per day (e.g. computing a return
+        series) must pass `source` explicitly - yfinance is the primary
+        price source and Tiingo is secondary/reconciliation-only, so
+        `source="yfinance"` is the right default for analysis code. Found
+        live: querying two tickers' prices once Tiingo data existed
+        alongside yfinance returned 2 rows per trade_date with no way to
+        tell them apart without this parameter.
         """
         query = """
             SELECT p.fact_id, p.entity_id, e.cik, t.ticker, p.trade_date,

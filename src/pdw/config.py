@@ -10,9 +10,9 @@ class Settings(BaseSettings):
 
     Every field defaults to something that runs out of the box against the
     docker-compose Postgres instance. `edgar_contact_email` defaults to an obvious
-    placeholder rather than a real address — see CLAUDE.md 4.1: never commit a real
-    email, override it via .env. That field isn't used until the EDGAR adapter
-    (M2) makes its first request, so it fails loudly there, not at CLI startup.
+    placeholder rather than a real address — never commit a real email, override
+    it via .env. That field isn't used until the EDGAR adapter makes its first
+    request, so it fails loudly there, not at CLI startup.
     """
 
     model_config = SettingsConfigDict(env_file=".env", env_prefix="PDW_", extra="ignore")

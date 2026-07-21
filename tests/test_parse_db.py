@@ -137,7 +137,7 @@ def test_run_parse_still_creates_entity_for_ticker_with_zero_facts(
     companyfacts response has entityName but zero us-gaap facts (only a
     registration-statement fee filing under a different taxonomy). Entity/
     ticker mapping must not be skipped just because there are no fundamentals
-    yet - it's a CLAUDE.md M3 deliverable in its own right.
+    yet - it's a deliverable in its own right.
     """
     ticker_map_body = json.dumps(
         {"0": {"cik_str": 9999999999, "ticker": "ZEROFACTS", "title": "Zero Facts Corp"}}
@@ -245,8 +245,8 @@ def test_entity_ticker_rejects_overlapping_ticker_for_a_different_entity(
     db_connection: psycopg.Connection,
 ) -> None:
     """core.entity_ticker's EXCLUDE constraint (invariant-style, mirroring
-    CLAUDE.md 5 #1) must reject two entities holding the same ticker at the
-    same time."""
+    the no-knowledge-overlap invariant) must reject two entities holding
+    the same ticker at the same time."""
     with db_connection.cursor() as cur:
         cur.execute(
             "INSERT INTO core.entity (cik, name) VALUES ('1111111111', 'One') RETURNING entity_id"

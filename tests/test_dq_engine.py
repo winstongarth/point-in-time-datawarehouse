@@ -11,7 +11,7 @@ from pdw.dq_engine import resolve_exception, run_all_checks, triage_exception
 # One real rule, matching config/reconciliation.yaml's shape - avoids
 # depending on that file's actual path from the test's working directory,
 # while still exercising check_cross_vendor_price's own "no comparable
-# rows yet" vacuous-pass result (CLAUDE.md 7: every check writes a result
+# rows yet" vacuous-pass result (every check writes a result
 # every run, including passes).
 _RULES: list[dict[str, object]] = [
     {
