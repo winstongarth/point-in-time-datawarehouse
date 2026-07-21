@@ -1,4 +1,4 @@
-# pdw — Point-in-time Data Warehouse
+# Point-in-time Data Warehouse
 
 A bitemporal financial data warehouse. It ingests the same 50 large-cap US
 securities from multiple public vendors, stores every fact with **two
@@ -169,29 +169,6 @@ Full schema DDL and rationale: [docs/architecture.md](docs/architecture.md).
 | [yfinance](https://github.com/ranaroussi/yfinance) | Prices (primary) | Unofficial and fragile — kept strictly behind a `PriceSource` interface. `Close` vs `Adj Close` divergence across fetch dates is the mechanism for demonstrating retroactive adjustment. |
 | [Tiingo](https://www.tiingo.com/) | Prices (secondary) | Independent opinion for cross-vendor reconciliation only (replaced Stooq, which turned out to sit behind a JS bot-detection challenge — see [docs/limitations.md](docs/limitations.md)). Reconciled on `adj_close`, not `close` — yfinance's `Close` is always split-adjusted by Yahoo's own backend, so it isn't comparable to Tiingo's raw quote for any ticker that's split within the fetch window. |
 
-A single logical metric can map to multiple XBRL tags across years and
-filers (e.g. revenue as `RevenueFromContractWithCustomerExcludingAssessedTax`,
-`Revenues`, or `SalesRevenueNet`). The mapping is an explicit,
-priority-ordered list in `config/metric_map.yaml` (from M2), and whichever
-tag was actually used is recorded in `vendor_native_tag` on every fact row —
-tag switches are visible in the data, never smoothed over.
-
-## Project status / milestone roadmap
-
-Each milestone ends in something runnable and testable, gets its own branch,
-and is committed once its accept criteria pass — the next milestone doesn't
-start until then.
-
-| # | Milestone | Accept criteria | Status |
-|---|---|---|---|
-| M1 | Foundation — repo layout, `uv` project, Docker Postgres, Alembic, `ops.pipeline_run`, structured JSON logging, `typer` CLI skeleton, CI | `make up && make migrate && pdw --help` works from a clean clone | ✅ Done |
-| M2 | Raw ingestion — EDGAR + yfinance + Tiingo adapters, rate limiting, retry, content-hash dedup | `pdw ingest --source edgar ...` populates `raw.payload` for 50 tickers; a second run adds fetch records but zero new hashes | ✅ Done |
-| M3 | Parse and normalize — XBRL → `stg`, metric map applied, entity/ticker mapping built | All 6 metrics present for ≥90% of expected entity-quarters (accepted at 87.6%, see [docs/limitations.md](docs/limitations.md)); coverage report; `vendor_native_tag` populated everywhere | ✅ Done |
-| M4 | Bitemporal core loader — `stg` → `core` with correct knowledge-time handling | All 6 invariants hold under `pytest`; loader is idempotent; synthetic amendment fixture produces exactly 2 non-overlapping rows | ✅ Done |
-| M5 | Point-in-time reader — `PointInTimeReader` + `pdw query --as-of` | `as_of` before/after a known restatement returns original/restated value; property test: no row ever has `filed_date > as_of` | ✅ Done |
-| M6 | Quality and reconciliation — all 8 checks, exception lifecycle, auto-generated data dictionary | `pdw dq run` emits results for every check; seeded corruptions detected at correct severity; dictionary regenerates deterministically | ✅ Done |
-| M7 | The experiment — earnings-yield long/short, point-in-time vs. latest | `docs/findings.md` has the comparison table, equity-curve chart, and ≥3 traced case studies linked to `fact_id`/accession number | ✅ Done |
-| M8 | Operations layer — SLA/freshness monitoring, dependency DAG, post-mortems | `pdw ops status` shows per-feed freshness; `docs/runbook.md` gives triage steps per `BREAK` check | ✅ Done |
 
 ## Quickstart
 
@@ -255,30 +232,9 @@ docs/           architecture, data dictionary, findings, runbook, limitations
 - Target ≥85% coverage on `src/core/` and `src/quality/` once they exist;
   adapters may be lower.
 
-## Documentation
 
-The reviewer of this project may read only the docs — they're written
-accordingly, not as an afterthought:
+## Limitations
 
-| Doc | Contents | Lands at |
-|---|---|---|
-| [docs/architecture.md](docs/architecture.md) | Schema flow, bitemporal model, sequence diagram of a restatement | M8 (written; see [postmortems](docs/postmortems.md)) |
-| [docs/dictionary/](docs/dictionary/) | Auto-generated per-dataset field/type/source/nullability/caveat reference, regenerated from live schema + config | M6 |
-| [docs/findings.md](docs/findings.md) | The M7 experiment: numbers, equity curves, traced case studies | M7 |
-| [docs/runbook.md](docs/runbook.md) | Triage procedure and escalation path per `dq` check | M8 |
-| [docs/postmortems.md](docs/postmortems.md) | Three real failures hit during this build, root-caused | M8 |
-| [docs/dependency_dag.md](docs/dependency_dag.md) | Feed → table → check/consumer dependency graph, blast-radius-highlighted by current SLA status (`pdw ops deps`) | M8 |
-| [docs/limitations.md](docs/limitations.md) | What this project deliberately does not attempt, stated plainly | Available now |
-
-## Scope and limitations
-
-Hard scope limits, kept fixed on purpose to keep this finishable: 50 tickers
-(`config/universe.yaml`, a fixed list, not index-derived), 6 fundamental
-metrics (revenue, net income, total assets, total equity, diluted weighted
-average shares outstanding, operating cash flow), 10 years of history or
-vendor availability (whichever is shorter), daily prices / quarterly
-fundamentals, no intraday, no options, no international, no alternative
-data, no ML, no web UI.
 
 See [docs/limitations.md](docs/limitations.md) for what this means in
 practice — survivorship bias in the universe, no vendor delivery SLA, and a
