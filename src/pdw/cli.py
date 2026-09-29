@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from importlib.metadata import version as _package_version
 from pathlib import Path
 from typing import Annotated
@@ -366,15 +366,146 @@ def backtest_run(
         encoding="utf-8",
     )
 
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(
-        render_findings_report(pit_run, latest_run, differences, case_studies, chart_out.name),
-        encoding="utf-8",
+    report = render_findings_report(
+        pit_run, latest_run, differences, case_studies, chart_out.name
     )
+
+    # `pdw strategy run` owns everything below the marker in this same file.
+    # Regenerating this half must not silently delete the other one.
+    from pdw.multifactor import SECTION_MARKER
+    from pdw.multifactor_report import strip_section
+
+    existing = out.read_text(encoding="utf-8") if out.exists() else ""
+    strategy_section = strip_section(existing, SECTION_MARKER)
+    if strategy_section:
+        report = f"{report.rstrip()}\n\n{strategy_section.rstrip()}\n"
+
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(report, encoding="utf-8")
 
     typer.echo(
         f"{len(pit_run.portfolios)} rebalances, {len(differences)} position differences, "
         f"{len(case_studies)} case studies; report at {out}"
+        + (" (strategy section preserved)" if strategy_section else "")
+    )
+
+
+strategy_app = typer.Typer(help="The multi-factor earnings strategy.")
+app.add_typer(strategy_app, name="strategy")
+
+
+@strategy_app.command("run")
+def strategy_run(
+    universe: Annotated[
+        Path, typer.Option("--universe", help="Path to the universe YAML file")
+    ] = Path("config/universe.yaml"),
+    config_path: Annotated[
+        Path, typer.Option("--config", help="Strategy parameters")
+    ] = Path("config/multifactor.yaml"),
+    sectors_path: Annotated[
+        Path, typer.Option("--sectors", help="Ticker -> sector map for neutralisation")
+    ] = Path("config/sectors.yaml"),
+    start: Annotated[
+        str, typer.Option("--start", help="First signal date, YYYY-MM-DD")
+    ] = "2017-01-01",
+    end: Annotated[str, typer.Option("--end", help="Last signal date, YYYY-MM-DD")] = "2026-06-30",
+    out: Annotated[
+        Path, typer.Option("--out", help="Findings report to append the strategy section to")
+    ] = Path("docs/findings.md"),
+    chart_out: Annotated[
+        Path, typer.Option("--chart-out", help="Where to write the equity curve chart")
+    ] = Path("docs/multifactor_equity_curve.svg"),
+    compare: Annotated[
+        bool,
+        typer.Option(
+            "--compare/--no-compare",
+            help="Also run the two non-point-in-time views for the look-ahead decomposition",
+        ),
+    ] = True,
+) -> None:
+    """Run the multi-factor strategy and write its section of --out."""
+    from pdw.data import FundamentalsView
+    from pdw.db import get_connection
+    from pdw.ingest import load_universe
+    from pdw.multifactor import (
+        METRICS,
+        SECTION_MARKER,
+        information_coefficients,
+        load_config,
+        load_point_in_time_facts,
+        load_price_panel,
+        load_sectors,
+        rebalance_sessions,
+        run_strategy,
+    )
+    from pdw.multifactor_report import (
+        render_equity_curve_svg,
+        render_report,
+        upsert_section,
+    )
+    from pdw.query import PointInTimeReader
+
+    tickers = load_universe(universe)
+    config = load_config(config_path)
+    sectors = load_sectors(sectors_path)
+    first, last = date.fromisoformat(start), date.fromisoformat(end)
+
+    views = (
+        list(FundamentalsView) if compare else [FundamentalsView.POINT_IN_TIME]
+    )
+
+    with get_connection() as conn:
+        # Momentum needs ~12 months of prices before the first signal date,
+        # so the panel starts earlier than the first rebalance.
+        panel = load_price_panel(conn, tickers, first - timedelta(days=500), last)
+        signal_dates = rebalance_sessions(panel.sessions, config.rebalance, first, last)
+        if not signal_dates:
+            raise typer.BadParameter(f"no trading sessions between {first} and {last}")
+
+        typer.echo(f"{len(signal_dates)} {config.rebalance} rebalances; reading fundamentals...")
+        pit_cache = load_point_in_time_facts(conn, signal_dates)
+        latest_facts = PointInTimeReader(conn, datetime.now(UTC)).fundamentals(METRICS)
+
+        runs = {}
+        for view in views:
+            typer.echo(f"  running view: {view.value}")
+            runs[view] = run_strategy(
+                conn=conn,
+                tickers=tickers,
+                config=config,
+                sectors=sectors,
+                panel=panel,
+                signal_dates=signal_dates,
+                view=view,
+                latest_facts=latest_facts,
+                pit_cache=pit_cache,
+            )
+
+    primary = runs[FundamentalsView.POINT_IN_TIME]
+    ics = information_coefficients(primary.rebalances, panel)
+
+    curves = [
+        (v.label, color, runs[v].nav_net)
+        for v, color in (
+            (FundamentalsView.POINT_IN_TIME, "#1f77b4"),
+            (FundamentalsView.RESTATED_KNOWN_PERIODS, "#ff7f0e"),
+            (FundamentalsView.LATEST_NAIVE, "#d62728"),
+        )
+        if v in runs
+    ]
+    curves.append(("Equal-weight universe", "#7f7f7f", primary.benchmark))
+
+    chart_out.parent.mkdir(parents=True, exist_ok=True)
+    chart_out.write_text(render_equity_curve_svg(curves), encoding="utf-8")
+
+    section = render_report(runs, ics, config, chart_out.name, compare)
+    existing = out.read_text(encoding="utf-8") if out.exists() else ""
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(upsert_section(existing, section, SECTION_MARKER), encoding="utf-8")
+
+    typer.echo(
+        f"{len(primary.rebalances)} rebalances, {len(ics)} signals scored; "
+        f"strategy section written to {out}"
     )
 
 

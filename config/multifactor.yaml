@@ -1,0 +1,68 @@
+# Parameters for `pdw strategy run` - the multi-factor earnings strategy.
+#
+# Everything the strategy does that could reasonably be argued about lives
+# here rather than in code, including the business-model exclusions. Weights
+# are equal and fixed in advance: with 50 names and under ten years of
+# history, weights fitted to this backtest would mostly be fitting noise.
+
+rebalance: monthly          # monthly | quarterly - signal at period-end close
+mode: long_short            # long_short (dollar-neutral) | long_only
+
+universe_size:
+  entry_rank: 10            # a name enters the book only inside the top/bottom 10
+  hold_rank: 15             # ...but is held while it stays inside the top/bottom 15
+  min_scored: 20            # skip the rebalance entirely below this many scored names
+
+signals:
+  # Higher is always better. Group weights are equal; a ticker needs
+  # min_groups of the four to be ranked at all.
+  min_groups: 3
+  groups:
+    value:
+      weight: 1.0
+      signals: [earnings_yield, cash_flow_yield]
+    growth:
+      weight: 1.0
+      signals: [revenue_growth, earnings_surprise]
+    quality:
+      weight: 1.0
+      signals: [return_on_assets, low_accruals]
+    momentum:
+      weight: 1.0
+      signals: [momentum_12_1]
+
+scoring:
+  winsorize_pct: 5.0        # clip each signal at its 5th/95th cross-sectional percentile
+  zscore_clip: 3.0
+  min_tickers_per_signal: 10   # drop a signal for a date if fewer names have it
+  sector_neutralize: true
+  min_sector_size: 3        # only neutralise sectors with at least this many scored names
+
+sizing:
+  scheme: inverse_volatility
+  vol_lookback_days: 63
+  max_weight: 0.15          # per name, per leg
+
+frictions:
+  execution_lag_sessions: 1   # signal at S's close, trade at S+1's close
+  cost_bps_per_dollar: 10.0   # one-way, on every dollar traded
+  borrow_bps_per_year: 50.0   # on the short leg's gross exposure, accrued daily
+  trading_days_per_year: 252
+
+staleness:
+  max_days_since_period_end: 200   # no fundamental signals if the latest quarter is older
+
+exclusions:
+  # Banks have no revenue concept comparable to an industrial's, and their
+  # operating cash flow mixes in loan and deposit flows - so those two
+  # signals are dropped for them. Their value, surprise, ROA and momentum
+  # signals still count.
+  - tickers: [JPM, BAC, WFC]
+    signals: [revenue_growth, cash_flow_yield]
+    reason: >-
+      Bank holding companies: no comparable revenue concept, and operating
+      cash flow is dominated by loan/deposit flows rather than operations.
+
+earnings_surprise:
+  min_history_quarters: 4   # need at least this many prior YoY changes
+  max_history_quarters: 8   # ...and use at most this many for the stdev

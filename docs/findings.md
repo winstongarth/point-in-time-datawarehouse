@@ -266,3 +266,122 @@ Each row traces one restatement that changed portfolio membership at a specific 
 - Period: 2023-09-30 net income
 - Point-in-time: **2,317,100,000** (`fact_id=10996`, accession `0000063908-23-000101`) -> excluded
 - Latest (restated): **2,317,000,000** (`fact_id=10997`, accession `0000063908-24-000156`) -> long
+
+<!-- pdw:strategy-report -->
+
+# Strategy: multi-factor earnings long/short
+
+The backtest above is a deliberately crude instrument for *measuring* look-ahead bias. This is the other half: a strategy built on the same warehouse that could plausibly be traded. It ranks the universe monthly on four families of signals derived from earnings reports and prices, holds a dollar-neutral long/short book, and pays realistic costs. Every fundamentals read goes through `PointInTimeReader` with an `as_of` of the signal date's close.
+
+**The one-session gap between signal and trade is deliberate:** a signal that uses today's close cannot also trade at today's close. Signals are computed at each period-end close and the book is traded at the *next* session's close, paying 10 bps on every dollar moved.
+
+Run live over **2017-02-01 to 2026-06-30**, 113 rebalances.
+
+## Performance
+
+| Metric | Gross | Net of costs | Equal-weight universe |
+|---|---|---|---|
+| Cumulative return | 138.88% | 106.90% | 505.53% |
+| CAGR | 9.70% | 8.04% | 21.10% |
+| Volatility (annualized) | 13.57% | 13.57% | 18.22% |
+| Sharpe | 0.75 | 0.64 | 1.15 |
+| Max drawdown | -20.13% | -22.15% | -30.41% |
+| Avg. turnover per rebalance | 40.88% | 40.88% | n/a |
+
+**Compare Sharpe, not CAGR, against the benchmark.** A dollar-neutral book is built not to depend on the market's direction, so its return is not trying to beat a long-only index; the question is how much return it produces per unit of risk. The gross-to-net gap is how much of any edge survives trading costs.
+
+![Multi-factor equity curves](multifactor_equity_curve.svg)
+
+## The most recent book
+
+Signalled at the 2026-05-29 close and traded at the 2026-06-01 close. Weights are signed shares of NAV, so each leg sums to 100%. The composite is the sector-neutralised score the ranking is built on - it has no units, only an ordering.
+
+| Side | Ticker | Weight | Composite |
+|---|---|---|---|
+| long | NVDA | +8.20% | +0.78 |
+| long | GOOGL | +8.48% | +0.55 |
+| long | LLY | +7.80% | +0.40 |
+| long | AMD | +4.02% | +0.45 |
+| long | V | +12.28% | +0.20 |
+| long | MA | +13.05% | +0.18 |
+| long | AMZN | +10.25% | +0.43 |
+| long | CAT | +7.08% | +0.39 |
+| long | MCD | +15.00% | +0.38 |
+| long | BAC | +13.84% | +0.27 |
+| short | BRK.B | -15.00% | -0.82 |
+| short | CRM | -7.71% | -0.17 |
+| short | NFLX | -11.04% | -0.50 |
+| short | NOW | -4.73% | -0.48 |
+| short | ABT | -13.42% | -0.36 |
+| short | LIN | -15.00% | -0.26 |
+| short | IBM | -7.14% | -0.56 |
+| short | TSLA | -8.46% | -0.47 |
+| short | ORCL | -5.88% | -0.39 |
+| short | DHR | -11.61% | -0.36 |
+
+## Look-ahead decomposition
+
+The identical strategy, run on three views of the *same* fundamentals. Only what the strategy is allowed to know changes; the schedule, sizing and costs are held fixed, so the gap between consecutive rows isolates one effect at a time.
+
+| View | What it sees | Cumulative | Sharpe | Max DD | Isolates |
+|---|---|---|---|---|---|
+| Point-in-time | Only what was filed before the cutoff, as then-stated | 106.90% | 0.64 | -22.15% | - |
+| Restated values, known periods only | Today's revised values, but only for quarters already reported | 79.31% | 0.54 | -24.00% | Restatement bias alone |
+| Latest data (naive) | Today's values for every quarter ended by the signal date, filed or not | 34.34% | 0.29 | -27.19% | Reporting-lag look-ahead |
+
+Row 2 minus row 1 is **restatement bias** alone: the same quarters, revalued by later amendments. Row 3 minus row 2 is **reporting-lag look-ahead**: trading a quarter weeks before its 10-Q existed. The original experiment above conflates the two - its "latest" run includes the quarter that ended the day before each rebalance, so its 217 position differences mix both effects.
+
+### Which way the gaps actually ran
+
+**Both forms of look-ahead made this strategy look *worse*, not better** - Sharpe falls from 0.64 point-in-time to 0.29 on the naive view (-0.10 from restatement, -0.25 from reporting lag). That is the opposite of the usual expectation, which is that seeing a quarter before it was filed lets a backtest trade the post-earnings drift before it starts, flattering the result.
+
+The honest reading is that **this is what look-ahead does to a strategy whose signals carry no measurable edge**. Every information coefficient below has |t| < 2, so the ranking is close to noise; feeding it *different* noise - earlier, restated - reshuffles the book without making it more right. The three curves are three draws from much the same distribution, and their order is not something this sample can resolve. Read the gaps as evidence about how much the *positions* move, not as a measurement of how much edge look-ahead manufactures: on a strategy that did have an edge, the sign would be expected to flip.
+
+## Information coefficients
+
+Each signal's rank correlation with the *next* period's return, averaged across rebalances. The equity curve mixes signal quality with sizing, costs and luck; the IC isolates whether the ordering itself carried information. A mean IC of 0.02-0.05 is a useful equity signal; **|t| < 2 means this sample cannot tell it apart from zero**, which on 50 names over under ten years is the common case.
+
+| Signal | Mean IC | t-stat | Periods | Hit rate |
+|---|---|---|---|---|
+| `revenue_growth` | +0.0254 | 1.00 | 112 | 55% |
+| `momentum_12_1` | +0.0180 | 0.66 | 106 | 56% |
+| `low_accruals` | +0.0171 | 0.94 | 112 | 54% |
+| `earnings_surprise` | +0.0119 | 0.63 | 112 | 58% |
+| `return_on_assets` | -0.0008 | -0.04 | 112 | 50% |
+| `cash_flow_yield` | -0.0106 | -0.40 | 112 | 50% |
+| `earnings_yield` | -0.0129 | -0.56 | 112 | 48% |
+
+Hit rate is the share of rebalances where the signal's IC was positive; 50% is a coin flip.
+
+## How a position gets made
+
+1. **Signals.** Four equally-weighted groups: **value** (`earnings_yield`, `cash_flow_yield`), **growth** (`revenue_growth`, `earnings_surprise`), **quality** (`return_on_assets`, `low_accruals`), **momentum** (`momentum_12_1`). Every signal is oriented so higher is better, which is why `low_accruals` is negated.
+2. **Winsorize** at the 5th/95th cross-sectional percentile, then **z-score** clipped at ±3. A signal held by fewer than 10 names is dropped for that date.
+3. **Composite** = weighted mean of the group scores a ticker actually has; it needs 3 of 4 groups to be ranked at all.
+4. **Sector-neutralise** against `config/sectors.yaml` (sectors with 3+ scored names). Without this, a value tilt on mega caps is mostly "long energy and banks, short software" - a sector bet, not a stock bet.
+5. **Book.** Long the top 10, short the bottom 10, but a name is *held* while it stays inside the top/bottom 15. Without that buffer, names around rank 10 flip every month and the strategy pays to trade noise.
+6. **Size** inversely to 63-day realised volatility, capped at 15% per name, so one high-volatility name doesn't carry several times the risk of a staple.
+
+### Where the numbers come from, and the traps avoided
+
+- **Quarters are rebuilt, not read.** EDGAR almost never tags Q4 on its own (a 10-K reports the fiscal year) and cash-flow statements are year-to-date in every 10-Q. `pdw.quarterly` keeps a directly-reported 3-month fact when one exists and otherwise derives the quarter from two cumulative facts sharing a fiscal-year start: Q4 = FY − 9M, Q2 cash flow = 6M − 3M. A TTM is only computed over **four consecutive** quarters, checked rather than assumed.
+- **Market cap is split-consistent.** A filing's share count is in the units of its period end; the price is on the signal date. `pdw.signals.market_cap` rebases the count by the split factor accumulated between those two dates, recovered as `tiingo_close / yfinance_close` on each day - exactly the cumulative split factor after that day.
+- **Share counts stay point-in-time even in the restated runs**, because later filings restate historical counts onto a post-split basis, which would move market cap mechanically rather than economically.
+- **Stale data is dropped.** A company whose latest quarter ended more than 200 days before the signal date gets no fundamental signals that period - but keeps its momentum signal, which needs no filing.
+- **Business-model exclusions** (BAC, JPM, WFC): `cash_flow_yield`, `revenue_growth` dropped. Bank holding companies: no comparable revenue concept, and operating cash flow is dominated by loan/deposit flows rather than operations.
+
+### Frictions modelled, and not
+
+| Modelled | Not modelled |
+|---|---|
+| 1-session execution lag | Market impact growing with trade size (immaterial at mega-cap liquidity for a personal book, material at fund scale) |
+| 10 bps per dollar traded | Interest on cash and the short rebate (understates a real long/short by roughly the T-bill rate) |
+| 50 bps/yr borrow on shorts | Hard-to-borrow names, recalls |
+| Positions drift with prices between rebalances | Taxes, dividends withheld on shorts |
+| Daily mark-to-market, so drawdowns are real | Intraday execution |
+
+### Honest framing
+
+These are the most widely published equity factors, and published factors have weakened after publication (McLean & Pontiff 2016). On 50 mega caps they are also crowded, and the universe is survivorship-biased by construction (see [limitations.md](limitations.md)) - today's 50 largest names are all long-run winners. 
+
+

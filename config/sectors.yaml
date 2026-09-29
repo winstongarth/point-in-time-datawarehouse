@@ -1,0 +1,62 @@
+# GICS-style sector for every ticker in config/universe.yaml, used only to
+# sector-neutralise the composite score (subtract each sector's mean).
+#
+# Without neutralisation a value tilt across mega caps is mostly "long energy
+# and banks, short software" - a sector bet dressed up as a stock-selection
+# bet, and one that swamps the factor signal it is meant to express.
+#
+# These are *today's* classifications applied to all of history (see
+# docs/limitations.md): a static map, like config/universe.yaml itself. GE in
+# 2017 was a sprawling conglomerate and is classified Industrials here
+# throughout; that is a known simplification, not an oversight.
+sectors:
+  AAPL: information_technology
+  MSFT: information_technology
+  GOOGL: communication_services
+  AMZN: consumer_discretionary
+  NVDA: information_technology
+  META: communication_services
+  BRK.B: financials
+  TSLA: consumer_discretionary
+  AVGO: information_technology
+  JPM: financials
+  LLY: health_care
+  V: financials
+  XOM: energy
+  UNH: health_care
+  MA: financials
+  COST: consumer_staples
+  HD: consumer_discretionary
+  PG: consumer_staples
+  JNJ: health_care
+  NFLX: communication_services
+  ABBV: health_care
+  BAC: financials
+  CRM: information_technology
+  ORCL: information_technology
+  WMT: consumer_staples
+  KO: consumer_staples
+  MRK: health_care
+  CVX: energy
+  ADBE: information_technology
+  PEP: consumer_staples
+  ACN: information_technology
+  TMO: health_care
+  LIN: materials
+  MCD: consumer_discretionary
+  ABT: health_care
+  CSCO: information_technology
+  WFC: financials
+  IBM: information_technology
+  GE: industrials
+  DHR: health_care
+  PM: consumer_staples
+  TXN: information_technology
+  INTU: information_technology
+  CAT: industrials
+  QCOM: information_technology
+  VZ: communication_services
+  AMD: information_technology
+  NOW: information_technology
+  UNP: industrials
+  AMGN: health_care

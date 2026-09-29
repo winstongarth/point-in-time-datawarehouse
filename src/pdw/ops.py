@@ -93,8 +93,8 @@ DEPENDENCY_EDGES: dict[str, list[str]] = {
         "dq: price_staleness",
         "dq: return_outliers",
     ],
-    "PointInTimeReader.fundamentals": ["earnings-yield backtest"],
-    "PointInTimeReader.prices": ["earnings-yield backtest"],
+    "PointInTimeReader.fundamentals": ["earnings-yield backtest", "multi-factor strategy"],
+    "PointInTimeReader.prices": ["earnings-yield backtest", "multi-factor strategy"],
 }
 
 _STATUS_FILL = {
