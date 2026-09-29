@@ -1,0 +1,255 @@
+# Point-in-time Data Warehouse
+
+A bitemporal financial data warehouse. It ingests the same 50 large-cap US
+securities from multiple public vendors, stores every fact with **two
+independent time dimensions**, reconciles vendors against each other, and can
+reconstruct exactly what was knowable on any past date — not just what is
+true today.
+
+This is a portfolio project for systematic data platform / data operations
+roles at quantitative investment firms. Correctness and documentation matter
+more than breadth: the scope is deliberately narrow (50 tickers, 6
+fundamental metrics, 10 years of history, daily/quarterly frequency — see
+[Limitations](#limitations)) so that what's here is
+demonstrably correct rather than broad and unverified.
+
+## Table of contents
+
+- [Why point-in-time correctness matters](#why-point-in-time-correctness-matters)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Data sources](#data-sources)
+- [Quickstart](#quickstart)
+- [Common tasks](#common-tasks)
+- [Project layout](#project-layout)
+- [Testing](#testing)
+- [Documentation](#documentation)
+- [Limitations](#limitations)
+
+## Why point-in-time correctness matters
+
+Financial datasets get restated, silently and often:
+
+1. **Amended filings** — a 10-K/A restates a prior quarter's numbers. EDGAR
+   exposes this because every datapoint carries its own `filed` date and
+   accession number.
+2. **Retroactive price adjustment** — after a split or dividend, a vendor's
+   entire adjusted-close history for *past* dates changes, with no
+   announcement. The adjusted close for 2024-01-02 is not the same value
+   today as it was six months ago.
+3. **Vendor backfill/correction** — a vendor reissues history with no
+   announcement at all. The only way to detect it is to hash what you
+   received and compare it to what you received before.
+
+A warehouse that just `UPDATE`s a row when a new value arrives destroys the
+ability to answer "what did we believe on date X?" — any backtest or
+analysis re-run today silently uses information that didn't exist yet at the
+time it claims to represent. That look-ahead bias is invisible unless you
+design against it from the start.
+
+This project stores both:
+
+| Axis | Columns | Meaning |
+|---|---|---|
+| **Valid time** | `period_start`, `period_end` | The real-world period a fact describes. "Q2 2024 revenue" has valid time 2024-04-01 → 2024-06-30. |
+| **Knowledge time** | `knowledge_from`, `knowledge_to` | The window during which the warehouse believed this value. Opens when the vendor published it (adjusted for [availability lag](#availability-lag)); closes when superseded. |
+
+A restatement never updates a row — it closes the old row's `knowledge_to`
+and inserts a new row with the same valid time and a later `knowledge_from`,
+linked via `supersedes`. Concretely, for one company's Q2 2024 revenue after
+a 10-Q/A amendment:
+
+| `fact_id` | `period_end` | `value` | `knowledge_from` | `knowledge_to` | `supersedes` |
+|---|---|---|---|---|---|
+| 101 | 2024-06-30 | 24,930,000,000 | 2024-08-01T13:00Z | 2024-11-05T13:00Z | — |
+| 187 | 2024-06-30 | 24,870,000,000 | 2024-11-05T13:00Z | infinity | 101 |
+
+A query with `as_of = 2024-09-01` returns fact 101 (what was actually known
+then); a query with `as_of = 2024-12-01` returns fact 187. Both are correct
+answers to different questions, and both stay queryable forever — nothing is
+ever deleted or overwritten in `core`.
+
+The capstone experiment (`pdw backtest run`) runs a naive earnings-yield
+long/short backtest twice — once through point-in-time data, once through
+latest-restated data — and quantifies the performance gap this causes. Run live against the full 50-ticker universe
+(39 quarterly rebalances, 2017–2026): restatement alone changed **217**
+individual long/short positions across **38 of 39** rebalance dates,
+moving cumulative return from **-82.39%** (point-in-time) to **-80.87%**
+(latest-restated) — a modest net effect that nonetheless traces to 41
+specific, fact_id-linked restatements (META, GE, WFC, and others). Full
+comparison table, equity-curve chart, and case studies in
+[docs/findings.md](docs/findings.md).
+
+### Availability lag
+
+`knowledge_from` is **not** the filing timestamp. A filing that lands at
+16:45 ET is not tradeable that day. Every source declares a configurable
+`availability_lag` (default: next trading day open) applied when computing
+`knowledge_from` — this is per-source config, not a hardcoded constant.
+
+## Architecture
+
+Five Postgres schemas, with a strict one-way data flow:
+
+```mermaid
+flowchart LR
+    EDGAR[SEC EDGAR] --> RAW
+    YF[yfinance] --> RAW
+    TIINGO[Tiingo] --> RAW
+
+    RAW[("raw\n(immutable landing zone)")] --> STG[("stg\n(parsed, typed)")]
+    STG --> CORE[("core\n(bitemporal facts)")]
+
+    CORE --> PITR["PointInTimeReader\n(the only sanctioned read path)"]
+    STG -.->|reconciliation| DQ[("dq\n(check_result, exception)")]
+    CORE -.->|reconciliation| DQ
+
+    RAW -.-> OPS[("ops.pipeline_run\n(lineage for every run)")]
+    STG -.-> OPS
+    CORE -.-> OPS
+```
+
+- **`raw`** — byte-identical vendor responses, hashed and append-only.
+  Enforced by a `BEFORE UPDATE OR DELETE` trigger that raises. Every `core`
+  fact traces back to a `payload_id` here.
+- **`stg`** — parsed and typed, truncated and rebuilt per run. No
+  constraints beyond types.
+- **`core`** — the bitemporal facts (`fundamental_fact`, `price_fact`,
+  `entity`, `entity_ticker`). Six invariants are enforced as **database
+  constraints**, not application logic — most importantly, an `EXCLUDE USING
+  gist` constraint on `tstzrange(knowledge_from, knowledge_to)` per
+  `(entity_id, metric_code, period_start, period_end, source)`, so knowledge-time overlap
+  is structurally impossible.
+- **`dq`** — cross-vendor reconciliation results and an exception lifecycle
+  (open → triage → close), declared in `config/reconciliation.yaml`, not
+  code.
+- **`ops`** — `pipeline_run` lineage: every `raw`/`dq` row traces back to the
+  exact run that produced it.
+
+The only sanctioned way to read `core` is `PointInTimeReader`:
+
+```python
+class PointInTimeReader:
+    def __init__(self, conn, as_of: datetime): ...   # as_of must be tz-aware
+    def fundamentals(self, metrics, tickers=None) -> pl.DataFrame: ...
+    def prices(self, tickers, start, end) -> pl.DataFrame: ...
+    def latest(self) -> "PointInTimeReader": ...       # as_of = now
+```
+
+applying `WHERE knowledge_from <= :as_of AND knowledge_to > :as_of`
+uniformly, with an in-code assertion that it never returns a row whose
+`filed_date` is after `as_of` — belt-and-braces alongside the DB constraint.
+Direct `SELECT` against `core` from analysis code is considered a bug.
+
+Full schema DDL and rationale: [docs/architecture.md](docs/architecture.md).
+
+## Tech stack
+
+| Concern | Choice | Note |
+|---|---|---|
+| Language | Python 3.11+ | |
+| Package manager | [`uv`](https://docs.astral.sh/uv/) | |
+| Database | PostgreSQL 15+ | Local, via Docker. Uses `tstzrange`, `jsonb`, `numeric`. |
+| DB access | `psycopg` 3 + hand-written SQL | No ORM — SQL is a demonstrated skill here. |
+| Migrations | Alembic (SQL-only revisions) | Hand-written SQL, versioned in `migrations/sql/`. |
+| Dataframes | `polars` | pandas only where a library forces it. |
+| CLI | `typer` | |
+| Config | `pydantic-settings` + YAML | |
+| Testing | `pytest` | |
+| Lint/format/types | `ruff`, `mypy --strict` on `src/` | |
+| Orchestration | Makefile + cron | Prefect was evaluated and declined — the Makefile covers what this pipeline actually needs. |
+
+## Data sources
+
+| Source | Role | Notes |
+|---|---|---|
+| [SEC EDGAR](https://www.sec.gov/edgar/sec-api-documentation) `companyfacts` API | Fundamentals (primary) | Requires a descriptive `User-Agent` with a contact email; rate-limited to ≤10 req/s via a token-bucket limiter. `filed` date on every datapoint is what makes point-in-time reconstruction possible. |
+| [yfinance](https://github.com/ranaroussi/yfinance) | Prices (primary) | Unofficial and fragile — kept strictly behind a `PriceSource` interface. `Close` vs `Adj Close` divergence across fetch dates is the mechanism for demonstrating retroactive adjustment. |
+| [Tiingo](https://www.tiingo.com/) | Prices (secondary) | Independent opinion for cross-vendor reconciliation only (replaced Stooq, which turned out to sit behind a JS bot-detection challenge — see [docs/limitations.md](docs/limitations.md)). Reconciled on `adj_close`, not `close` — yfinance's `Close` is always split-adjusted by Yahoo's own backend, so it isn't comparable to Tiingo's raw quote for any ticker that's split within the fetch window. |
+
+
+## Quickstart
+
+Prerequisites: [`uv`](https://docs.astral.sh/uv/), Docker Desktop, `make`.
+
+```sh
+git clone <this repo>
+cd project-etl
+cp .env.example .env       # defaults already match docker-compose.yml
+uv sync
+
+make up                     # start Postgres 15 in Docker (published on host port 5433)
+make migrate                 # apply Alembic migrations
+
+uv run pdw --help
+```
+
+`PDW_DATABASE_URL` defaults to `postgresql://pdw:pdw@localhost:5433/pdw` —
+port **5433**, not the Postgres default 5432, specifically so this doesn't
+collide with a native Postgres install some machines already have running.
+If 5433 is also taken on your machine, change the published port in
+`docker-compose.yml` and `PDW_DATABASE_URL` in `.env` to match.
+
+Once `pdw` is installed into an activated environment, the `uv run` prefix
+above is optional — `pdw --help` works directly.
+
+## Common tasks
+
+| Command | What it does |
+|---|---|
+| `make up` / `make down` | Start / stop the local Postgres container |
+| `make logs` | Tail the Postgres container's logs |
+| `make migrate` / `make downgrade` | Apply / roll back one Alembic revision |
+| `make lint` | `ruff check .` |
+| `make format` | `ruff format .` |
+| `make typecheck` | `mypy --strict` on `src/` |
+| `make test` | `pytest` (network-hitting tests are marked `integration` and excluded by default) |
+| `make check` | lint + typecheck + test, in that order |
+
+## Project layout
+
+```
+src/pdw/        application code (CLI, config, logging, ...)
+migrations/     Alembic env.py + hand-written SQL-only revisions (migrations/sql/)
+tests/          pytest; recorded and synthetic fixtures under tests/fixtures/
+config/         universe, metric mapping, reconciliation rules, per-feed SLAs
+docs/           architecture, data dictionary, findings, runbook, limitations
+```
+
+## Testing
+
+- **Unit tests use recorded fixtures, never the network.** Real payloads are
+  saved once to `tests/fixtures/`, contact details redacted, and committed.
+  Anything hitting a live API is marked `@pytest.mark.integration` and
+  excluded from the default run (see `addopts` in `pyproject.toml`).
+- **Bitemporal logic gets synthetic fixtures**: a simple amendment, a double
+  amendment, an out-of-order arrival, and a no-change re-fetch — real data
+  won't reliably contain all four.
+- **Invariants are tested against the live database**, not just asserted in
+  application code. Those tests build and migrate a throwaway `pdw_test`
+  database, so `make up` must be running before `make test`.
+- **Live runs against the full universe are part of acceptance, not a
+  formality.** Every failure in [docs/postmortems.md](docs/postmortems.md)
+  passed the unit suite and was caught only by running the real pipeline
+  against all 50 tickers.
+
+
+## Documentation
+
+| Document | What's in it |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | Full schema DDL, the six `core` invariants and why each is a database constraint, and a sequence diagram of a real six-version restatement. |
+| [docs/dictionary/](docs/dictionary/) | Per-table data dictionary, generated from the live schema by `pdw docs dictionary`. |
+| [docs/findings.md](docs/findings.md) | The point-in-time vs. latest-restated backtest result: comparison table, equity curve, and 41 fact-linked case studies. |
+| [docs/dependency_dag.md](docs/dependency_dag.md) | Feed → table → reader → consumer graph, generated by `pdw ops deps`, coloured by each feed's current SLA status. |
+| [docs/runbook.md](docs/runbook.md) | Triage steps for each BREAK-capable `dq` check, the escalation path, and the failure modes that recur. |
+| [docs/postmortems.md](docs/postmortems.md) | Three failures that shaped the design, each root-caused to the decision it left behind. |
+| [docs/limitations.md](docs/limitations.md) | What this warehouse does not do, stated up front. |
+
+## Limitations
+
+The scope is narrow on purpose, and some caveats are inherent rather than
+unfinished work — survivorship bias in the universe, no delivery SLA from any
+free vendor, a current-state-only SEC ticker map, and fundamentals coverage
+that lands at 87.6% for diagnosed reasons. All of them are written up in
+[docs/limitations.md](docs/limitations.md).

@@ -1,0 +1,69 @@
+[project]
+name = "pdw"
+version = "0.1.0"
+description = "Bitemporal, point-in-time correct financial data warehouse."
+readme = "README.md"
+authors = [
+    { name = "Winston Garth", email = "winstonpatrickgarth@gmail.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "alembic>=1.18.5",
+    "polars>=1.42.1",
+    "psycopg[binary]>=3.3.4",
+    "pydantic-settings>=2.14.2",
+    "pyyaml>=6.0.3",
+    "typer>=0.27.0",
+    "yfinance>=1.5.1",
+]
+
+[project.scripts]
+pdw = "pdw:main"
+
+[build-system]
+requires = ["uv_build>=0.11.5,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.0",
+    "pytest>=9.1.1",
+    "ruff>=0.15.22",
+    "types-pyyaml>=6.0.12.20260518",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+# Not this project's real floor (pyproject.toml's requires-python is 3.11) -
+# numpy's own stubs (pulled in transitively by polars) use PEP 695 `type`
+# statement syntax that mypy refuses to parse below 3.12, regardless of
+# follow_imports settings. Bumped here only to unblock that; nothing in
+# src/ intentionally relies on 3.12+ syntax.
+python_version = "3.12"
+strict = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+# yfinance ships no type stubs / py.typed marker.
+module = "yfinance.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# numpy's own stubs (pulled in transitively by polars) use PEP 695 `type`
+# statement syntax that requires python_version >= 3.12 to parse, which
+# breaks checking against this project's 3.11 target. Not our code to fix.
+module = ["numpy", "numpy.*"]
+follow_imports = "skip"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: hits a live network service; excluded from the default run",
+]
+addopts = "-m 'not integration'"
