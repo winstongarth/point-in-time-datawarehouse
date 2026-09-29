@@ -6,13 +6,6 @@ independent time dimensions**, reconciles vendors against each other, and can
 reconstruct exactly what was knowable on any past date — not just what is
 true today.
 
-This is a portfolio project for systematic data platform / data operations
-roles at quantitative investment firms. Correctness and documentation matter
-more than breadth: the scope is deliberately narrow (50 tickers, 6
-fundamental metrics, 10 years of history, daily/quarterly frequency — see
-[Limitations](#limitations)) so that what's here is
-demonstrably correct rather than broad and unverified.
-
 ## Table of contents
 
 - [Why point-in-time correctness matters](#why-point-in-time-correctness-matters)
